@@ -14,7 +14,7 @@ const profileData = {
     image: "assets/thepa-saraphon.png",
     summary: "ผู้นำทีมที่มุ่งเน้นการวางแผนงานขาย การพัฒนาทีม และการอธิบายทางเลือกด้านประกันภัยให้ลูกค้าเข้าใจได้ก่อนตัดสินใจ",
     highlights: ["วางแผนความคุ้มครอง", "พัฒนาทีมงาน", "ประสานงานลูกค้า"],
-    phone: "0812345678"
+    phone: "0924575836"
   },
   phannee: {
     name: "พรรณี สารกาล",
@@ -22,7 +22,7 @@ const profileData = {
     image: "assets/phannee-saraphon-patterned.png",
     summary: "ผู้ดูแลทีมและลูกค้าด้วยแนวทางที่เป็นกันเอง ใส่ใจรายละเอียด และพร้อมช่วยประสานตั้งแต่การเลือกความคุ้มครองไปจนถึงขั้นตอนบริการหลังการขาย",
     highlights: ["ดูแลลูกค้า", "ประสานงานบริการ", "ให้คำปรึกษาเบื้องต้น"],
-    phone: "0898765432"
+    phone: "0811759296"
   }
 };
 
@@ -404,7 +404,7 @@ function renderPremiumFields() {
       <label for="contact-channel">ช่องทางให้ทีมตอบกลับ</label>
       <select id="contact-channel" name="contactChannel">
         <option value="LINE @mittaresattahipdemo">LINE @mittaresattahipdemo (Demo)</option>
-        <option value="โทรศัพท์ 081-234-5678">โทรศัพท์ 081-234-5678 (Demo)</option>
+        <option value="โทรศัพท์ 08x-xxxx-xxxx">โทรศัพท์ 08x-xxxx-xxxx (Demo)</option>
         <option value="Facebook Mittare Sattahip Demo">Facebook Mittare Sattahip Demo</option>
       </select>
     </div>
