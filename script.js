@@ -9,7 +9,7 @@ const premiumCalculator = document.querySelector("#premium-calculator");
 
 const profileData = {
   thepa: {
-    name: "น.ต. เทพา สารกาล",
+    name: "เทพา สารกาล",
     role: "ผู้จัดการฝ่ายขายและขยายงาน",
     image: "assets/thepa-saraphon.png",
     summary: "ผู้นำทีมที่มุ่งเน้นการวางแผนงานขาย การพัฒนาทีม และการอธิบายทางเลือกด้านประกันภัยให้ลูกค้าเข้าใจได้ก่อนตัดสินใจ",
