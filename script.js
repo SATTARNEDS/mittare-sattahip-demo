@@ -78,25 +78,71 @@ const insurancePlans = [
   createPlan("fuel-ctp", "specialty", "พ.ร.บ.", "พ.ร.บ. รถบรรทุก LPG / NGV / น้ำมัน", "ประกันภัยภาคบังคับสำหรับรถตามประเภทเชื้อเพลิงและการจดทะเบียน", ["รถบรรทุกหรือรถที่จดทะเบียนใช้ LPG, NGV หรือน้ำมัน", "ผู้ประกอบการที่ต้องต่อทะเบียนและภาษี"], ["ความคุ้มครองผู้ประสบภัยจากรถตามกฎหมาย", "ค่าเสียหายเบื้องต้นและผลประโยชน์ตามสถานะ"], ["ประเภทรถ น้ำหนัก และลักษณะการใช้", "ประเภทเชื้อเพลิงตามทะเบียน"], ["ไม่คุ้มครองตัวรถหรือสินค้า", "วงเงินเป็นไปตามกฎหมาย"], ["ทะเบียนรถ", "ข้อมูลประเภทเชื้อเพลิง"])
 ];
 
-const vehicleLabels = {
-  sedan: "รถเก๋ง / Eco Car",
-  suv: "SUV / PPV",
-  pickup: "รถกระบะ",
-  ev: "รถยนต์ไฟฟ้า EV"
+const officialRateSources = {
+  compulsory: {
+    label: "อัตราเบี้ยประกันภัยรถยนต์ภาคบังคับ (พ.ร.บ.) ที่มิตรแท้เผยแพร่",
+    url: "https://www.mittare.com/motor-insurance/",
+    effective: "อัตราที่หน้าเว็บไซต์ระบุว่ามีวันเริ่มคุ้มครองตั้งแต่ 1 มีนาคม 2551"
+  },
+  products: {
+    label: "เงื่อนไขผลิตภัณฑ์จากเว็บไซต์มิตรแท้ประกันภัย",
+    url: "https://www.mittare.com/all-products/",
+    effective: "ตรวจสอบล่าสุด 19 มิถุนายน 2569"
+  }
 };
 
-const coverageLabels = {
-  type1: "ประกันภัยรถยนต์ประเภท 1",
-  type2plus: "ประกันภัยรถยนต์ประเภท 2+",
-  type3plus: "ประกันภัยรถยนต์ประเภท 3+",
-  type3: "ประกันภัยรถยนต์ประเภท 3",
-  compulsory: "พ.ร.บ. เท่านั้น"
+const compulsoryVehicleRates = {
+  motorcycle75: { label: "รถจักรยานยนต์ส่วนบุคคล ไม่เกิน 75 ซีซี", net: 150 },
+  motorcycle125: { label: "รถจักรยานยนต์ส่วนบุคคล เกิน 75–125 ซีซี", net: 300 },
+  motorcycle150: { label: "รถจักรยานยนต์ส่วนบุคคล เกิน 125–150 ซีซี", net: 400 },
+  motorcycleOver150: { label: "รถจักรยานยนต์ส่วนบุคคล เกิน 150 ซีซี", net: 600 },
+  privateCar7: { label: "รถยนต์นั่งส่วนบุคคล ไม่เกิน 7 คน", net: 600 },
+  privatePassenger15: { label: "รถยนต์โดยสารส่วนบุคคล ไม่เกิน 15 ที่นั่ง", net: 1100 },
+  privatePassenger20: { label: "รถยนต์โดยสารส่วนบุคคล 16–20 ที่นั่ง", net: 2050 },
+  privatePassenger40: { label: "รถยนต์โดยสารส่วนบุคคล 21–40 ที่นั่ง", net: 3200 },
+  privatePassengerOver40: { label: "รถยนต์โดยสารส่วนบุคคล เกิน 40 ที่นั่ง", net: 3740 },
+  privateTruck3: { label: "รถยนต์บรรทุกส่วนบุคคล ไม่เกิน 3 ตัน", net: 900 },
+  privateTruck6: { label: "รถยนต์บรรทุกส่วนบุคคล เกิน 3–6 ตัน", net: 1220 },
+  privateTruckOver6: { label: "รถยนต์บรรทุกส่วนบุคคล เกิน 6 ตัน", net: 1310 },
+  other: { label: "รถประเภทอื่น — ให้ทีมตรวจอัตราตามทะเบียน", net: null }
 };
 
-const usageLabels = {
-  personal: "ใช้ส่วนบุคคลทั่วไป",
-  frequent: "เดินทางบ่อย / ระยะทางสูง",
-  business: "ใช้ในกิจการ"
+const categoryQuoteFields = {
+  motor: [
+    ["vehicleMakeModel", "ยี่ห้อ / รุ่นรถ", "text", "เช่น Toyota Yaris Ativ"],
+    ["vehicleYear", "ปีจดทะเบียน", "number", "2022"],
+    ["vehicleValue", "มูลค่ารถโดยประมาณ (บาท)", "number", "600000"],
+    ["vehicleUsage", "การใช้งาน", "select", [["personal", "ส่วนบุคคล"], ["business", "ใช้ในกิจการ"], ["commercial", "รับจ้าง / เชิงพาณิชย์"]]],
+    ["repairType", "ประเภทการซ่อม", "select", [["garage", "ซ่อมอู่"], ["dealer", "ซ่อมห้าง / ศูนย์"]]],
+    ["claimHistory", "ประวัติเคลมย้อนหลัง", "select", [["0", "ไม่มีเคลม"], ["1", "1 ครั้ง"], ["2plus", "2 ครั้งขึ้นไป"]]]
+  ],
+  property: [
+    ["propertyType", "ประเภททรัพย์สิน", "select", [["house", "บ้านพักอาศัย"], ["condo", "คอนโด"], ["commercial", "อาคารพาณิชย์"], ["construction", "งานก่อสร้าง"]]],
+    ["propertyValue", "ทุนประกัน / มูลค่าทดแทน (บาท)", "number", "2000000"],
+    ["propertyProvince", "จังหวัดที่ตั้ง", "text", "ชลบุรี"],
+    ["constructionType", "โครงสร้างหลัก", "select", [["concrete", "คอนกรีต"], ["mixed", "โครงสร้างผสม"], ["wood", "ไม้"]]],
+    ["floodCoverage", "ต้องการภัยน้ำท่วม", "select", [["yes", "ต้องการ"], ["no", "ไม่ต้องการ / ขอประเมินก่อน"]]]
+  ],
+  personal: [
+    ["insuredAge", "อายุผู้เอาประกัน", "number", "35"],
+    ["occupation", "อาชีพ", "text", "พนักงานบริษัท"],
+    ["occupationRisk", "ระดับความเสี่ยงอาชีพ", "select", [["office", "งานสำนักงาน"], ["field", "งานภาคสนาม"], ["high", "งานเสี่ยง / ใช้เครื่องจักร"]]],
+    ["benefitAmount", "วงเงินที่ต้องการ (บาท)", "number", "500000"],
+    ["memberCount", "จำนวนผู้เอาประกัน", "number", "1"]
+  ],
+  business: [
+    ["businessType", "ประเภทธุรกิจ / สินค้า", "text", "ร้านค้า / คาเฟ่ / ขนส่ง"],
+    ["businessProvince", "จังหวัดที่ตั้ง / เส้นทาง", "text", "ชลบุรี"],
+    ["assetValue", "มูลค่าทรัพย์สินหรือสินค้าสูงสุด (บาท)", "number", "1000000"],
+    ["annualRevenue", "รายได้ต่อปีโดยประมาณ (บาท)", "number", "3000000"],
+    ["employeeCount", "จำนวนพนักงาน", "number", "5"]
+  ],
+  specialty: [
+    ["specialtySubject", "รายละเอียดสิ่งที่เอาประกัน", "text", "รุ่นโดรน / สถานีบริการ / ประเภทรถ"],
+    ["specialtyValue", "มูลค่าหรือวงเงินที่ต้องการ (บาท)", "number", "200000"],
+    ["specialtyUsage", "วัตถุประสงค์การใช้งาน", "text", "ส่วนบุคคล / เชิงพาณิชย์"],
+    ["specialtyProvince", "พื้นที่ใช้งาน", "text", "ชลบุรี"]
+  ]
 };
 
 menuButton?.addEventListener("click", () => {
@@ -195,6 +241,10 @@ document.querySelector("#plan-grid")?.addEventListener("click", (event) => {
 });
 
 document.querySelector("#product-dialog-primary")?.addEventListener("click", () => {
+  const selectedPlanId = document.querySelector("#product-dialog-primary")?.dataset.planId;
+  if (selectedPlanId && premiumCalculator) {
+    selectCalculatorPlan(selectedPlanId);
+  }
   productDialog?.close();
 });
 
@@ -208,31 +258,33 @@ document.querySelectorAll(".dialog-close").forEach((button) => {
   });
 });
 
+initializePremiumCalculator();
+
+document.querySelector("#premium-category")?.addEventListener("change", () => {
+  populatePremiumPlans();
+  renderPremiumFields();
+});
+
+document.querySelector("#premium-plan")?.addEventListener("change", renderPremiumFields);
+
+premiumCalculator?.addEventListener("reset", () => {
+  window.setTimeout(() => {
+    populatePremiumPlans();
+    renderPremiumFields();
+  }, 0);
+});
+
 premiumCalculator?.addEventListener("submit", (event) => {
   event.preventDefault();
   const formData = new FormData(premiumCalculator);
-  const vehicleType = formData.get("vehicleType");
-  const coverageType = formData.get("coverageType");
-  const vehicleYear = Number(formData.get("vehicleYear"));
-  const vehicleValue = Number(formData.get("vehicleValue"));
-  const driverProfile = formData.get("driverProfile");
+  const plan = insurancePlans.find((item) => item.id === formData.get("premiumPlan"));
+  if (!plan) return;
 
-  const estimate = calculatePremium({
-    vehicleType,
-    coverageType,
-    vehicleYear,
-    vehicleValue,
-    driverProfile
-  });
+  const result = isOfficialRatePlan(plan.id)
+    ? calculateCompulsoryPremium(formData.get("compulsoryVehicleClass"))
+    : buildQuoteRequest(plan, formData);
 
-  renderPremiumSummary({
-    vehicleType,
-    coverageType,
-    vehicleYear,
-    vehicleValue,
-    driverProfile,
-    estimate
-  });
+  renderPremiumSummary(plan, result);
 
   premiumDialog?.showModal();
 });
@@ -250,36 +302,7 @@ quoteForm?.addEventListener("submit", (event) => {
   quoteForm.reset();
 });
 
-function calculatePremium({ vehicleType, coverageType, vehicleYear, vehicleValue, driverProfile }) {
-  if (coverageType === "compulsory") {
-    return { minimum: 650, maximum: 1300 };
-  }
-
-  const coverageRates = {
-    type1: { rate: 0.024, minimum: 10500 },
-    type2plus: { rate: 0.011, minimum: 6500 },
-    type3plus: { rate: 0.007, minimum: 4800 },
-    type3: { rate: 0.004, minimum: 2800 }
-  };
-  const vehicleMultipliers = { sedan: 1, suv: 1.12, pickup: 1.08, ev: 1.22 };
-  const usageMultipliers = { personal: 1, frequent: 1.08, business: 1.14 };
-  const vehicleAge = Math.max(0, new Date().getFullYear() - vehicleYear);
-  const ageMultiplier = vehicleAge > 10 ? 1.12 : vehicleAge > 6 ? 1.06 : 1;
-  const config = coverageRates[coverageType];
-
-  // สูตรนี้ทำเพื่อแสดง UX ของ Demo เท่านั้น ไม่ใช่อัตราเบี้ยของบริษัท
-  const basePremium = Math.max(
-    config.minimum,
-    vehicleValue * config.rate * vehicleMultipliers[vehicleType] * usageMultipliers[driverProfile] * ageMultiplier
-  );
-
-  return {
-    minimum: roundToHundred(basePremium * 0.9),
-    maximum: roundToHundred(basePremium * 1.12)
-  };
-}
-
-function renderPremiumSummary(data) {
+function renderPremiumSummary(plan, result) {
   const thaiDate = new Intl.DateTimeFormat("th-TH", {
     year: "numeric",
     month: "long",
@@ -289,24 +312,242 @@ function renderPremiumSummary(data) {
 
   document.querySelector("#summary-number").textContent = documentNumber;
   document.querySelector("#summary-date").textContent = thaiDate;
-  document.querySelector("#summary-details").innerHTML = `
-    <div><span>ประเภทรถ</span><strong>${vehicleLabels[data.vehicleType]}</strong></div>
-    <div><span>ประเภทความคุ้มครอง</span><strong>${coverageLabels[data.coverageType]}</strong></div>
-    <div><span>ปีจดทะเบียน</span><strong>${data.vehicleYear}</strong></div>
-    <div><span>มูลค่ารถโดยประมาณ</span><strong>${formatCurrency(data.vehicleValue)}</strong></div>
-    <div><span>ลักษณะการใช้งาน</span><strong>${usageLabels[data.driverProfile]}</strong></div>
-    <div><span>สถานะเอกสาร</span><strong>ประมาณการเบื้องต้น</strong></div>
-  `;
-  document.querySelector("#summary-price").textContent =
-    `${formatCurrency(data.estimate.minimum)} – ${formatCurrency(data.estimate.maximum)}`;
+  document.querySelector("#summary-details").innerHTML = [
+    ["หมวดประกัน", getCategoryLabel(plan.category)],
+    ["แผน / ประเภท", plan.title],
+    ...result.details,
+    ["สถานะเอกสาร", result.status]
+  ].map(([label, value]) => `<div><span>${label}</span><strong>${value}</strong></div>`).join("");
+
+  document.querySelector("#summary-price-label").textContent = result.priceLabel;
+  document.querySelector("#summary-price").textContent = result.price;
+  document.querySelector("#summary-price-caption").textContent = result.caption;
+  document.querySelector("#summary-source").innerHTML = result.source;
 }
 
 function formatCurrency(value) {
-  return `${new Intl.NumberFormat("th-TH").format(value)} บาท`;
+  return `${new Intl.NumberFormat("th-TH", {
+    minimumFractionDigits: Number.isInteger(value) ? 0 : 2,
+    maximumFractionDigits: 2
+  }).format(value)} บาท`;
 }
 
-function roundToHundred(value) {
-  return Math.round(value / 100) * 100;
+function initializePremiumCalculator() {
+  if (!premiumCalculator) return;
+  populatePremiumPlans();
+  const requestedPlanId = new URLSearchParams(window.location.search).get("plan");
+  if (requestedPlanId) selectCalculatorPlan(requestedPlanId);
+  renderPremiumFields();
+}
+
+function populatePremiumPlans() {
+  const categorySelect = document.querySelector("#premium-category");
+  const planSelect = document.querySelector("#premium-plan");
+  if (!categorySelect || !planSelect) return;
+
+  const plans = insurancePlans.filter((plan) => plan.category === categorySelect.value);
+  planSelect.innerHTML = plans
+    .map((plan) => `<option value="${plan.id}">${plan.title}</option>`)
+    .join("");
+}
+
+function selectCalculatorPlan(planId) {
+  const plan = insurancePlans.find((item) => item.id === planId);
+  const categorySelect = document.querySelector("#premium-category");
+  const planSelect = document.querySelector("#premium-plan");
+  if (!plan || !categorySelect || !planSelect) return;
+
+  categorySelect.value = plan.category;
+  populatePremiumPlans();
+  planSelect.value = plan.id;
+  renderPremiumFields();
+}
+
+function renderPremiumFields() {
+  const category = document.querySelector("#premium-category")?.value;
+  const planId = document.querySelector("#premium-plan")?.value;
+  const plan = insurancePlans.find((item) => item.id === planId);
+  const container = document.querySelector("#premium-dynamic-fields");
+  const mode = document.querySelector("#calculator-mode");
+  const submitLabel = document.querySelector("#premium-submit-label");
+  if (!plan || !container || !mode) return;
+
+  const officialRate = isOfficialRatePlan(plan.id);
+  mode.classList.toggle("is-quote", !officialRate);
+  mode.textContent = officialRate
+    ? "อัตราสาธารณะ: ระบบคำนวณเบี้ยสุทธิ + อากรแสตมป์ + VAT 7% ให้ทันที"
+    : "แผนพิจารณารับประกัน: ระบบจะจัดทำใบขอคำนวณเบี้ยจากปัจจัยจริง โดยไม่เดาตัวเลขฐานเบี้ย";
+  submitLabel.textContent = officialRate ? "คำนวณเบี้ยจริงและสร้างใบสรุป" : "สร้างใบขอคำนวณเบี้ย";
+
+  if (officialRate) {
+    container.innerHTML = `
+      <div class="form-row">
+        <label for="compulsory-vehicle-class">ประเภทรถตามทะเบียน</label>
+        <select id="compulsory-vehicle-class" name="compulsoryVehicleClass" required>
+          ${Object.entries(compulsoryVehicleRates).map(([value, item]) =>
+            `<option value="${value}">${item.label}</option>`
+          ).join("")}
+        </select>
+      </div>
+      <p class="field-help">หากประเภทรถไม่ตรงกับรายการ ให้เลือก “รถประเภทอื่น” เพื่อจัดทำใบตรวจอัตรากับทีมงาน</p>
+    `;
+    return;
+  }
+
+  const fields = categoryQuoteFields[category] || [];
+  container.innerHTML = `
+    <div class="form-grid">
+      ${fields.map(renderCalculatorField).join("")}
+    </div>
+    ${renderVerifiedPlanOptions(plan.id)}
+    <div class="form-row">
+      <label for="contact-channel">ช่องทางให้ทีมตอบกลับ</label>
+      <select id="contact-channel" name="contactChannel">
+        <option value="LINE @mittaresattahipdemo">LINE @mittaresattahipdemo (Demo)</option>
+        <option value="โทรศัพท์ 081-234-5678">โทรศัพท์ 081-234-5678 (Demo)</option>
+        <option value="Facebook Mittare Sattahip Demo">Facebook Mittare Sattahip Demo</option>
+      </select>
+    </div>
+  `;
+}
+
+function renderCalculatorField([name, label, type, config]) {
+  if (type === "select") {
+    return `
+      <div class="form-row">
+        <label for="${name}">${label}</label>
+        <select id="${name}" name="${name}" required>
+          ${config.map(([value, text]) => `<option value="${value}">${text}</option>`).join("")}
+        </select>
+      </div>
+    `;
+  }
+
+  const numberAttributes = type === "number" ? 'min="0" step="1" inputmode="numeric"' : "";
+  return `
+    <div class="form-row">
+      <label for="${name}">${label}</label>
+      <input id="${name}" name="${name}" type="${type}" ${numberAttributes} placeholder="${config}" required>
+    </div>
+  `;
+}
+
+function renderVerifiedPlanOptions(planId) {
+  if (planId === "motor-permpoon") {
+    return `
+      <div class="form-row">
+        <label for="no-claim-years">ประวัติไม่มีเคลมต่อเนื่อง</label>
+        <select id="no-claim-years" name="noClaimYears">
+          <option value="0">ไม่มี / ลูกค้าใหม่</option>
+          <option value="1">1 ปี — ส่วนลดตามหน้าแผน 500 บาท</option>
+          <option value="2">2 ปี — ส่วนลดตามหน้าแผน 900 บาท</option>
+          <option value="3">3 ปีขึ้นไป — ส่วนลดตามหน้าแผน 1,200 บาท</option>
+        </select>
+      </div>
+    `;
+  }
+
+  if (["motor-extra", "motor-eco"].includes(planId)) {
+    return `
+      <div class="form-row">
+        <label for="has-wrap">รถติด Wrap / Sticker รอบคัน</label>
+        <select id="has-wrap" name="hasWrap">
+          <option value="no">ไม่มี</option>
+          <option value="yes">มี — หน้าแผนระบุเพิ่มเบี้ย 2,000 บาท/คัน</option>
+        </select>
+      </div>
+    `;
+  }
+
+  return "";
+}
+
+function isOfficialRatePlan(planId) {
+  return ["motor-compulsory", "fuel-ctp"].includes(planId);
+}
+
+function calculateCompulsoryPremium(vehicleClass) {
+  const rate = compulsoryVehicleRates[vehicleClass];
+  if (!rate || rate.net === null) {
+    return {
+      status: "รอตรวจอัตราตามทะเบียน",
+      priceLabel: "ผลการตรวจสอบ",
+      price: "กรุณาให้ทีมตรวจอัตรา",
+      caption: "รถประเภทอื่นอาจมีอัตราแตกต่างตามรหัสและลักษณะการใช้รถ",
+      details: [["ประเภทรถ", rate?.label || "ไม่ระบุ"]],
+      source: sourceLink(officialRateSources.compulsory)
+    };
+  }
+
+  // อากรแสตมป์ 0.4% ปัดขึ้นเป็นบาท และ VAT 7% คิดจากเบี้ยสุทธิรวมอากร
+  const stampDuty = Math.ceil(rate.net * 0.004);
+  const vat = (rate.net + stampDuty) * 0.07;
+  const total = rate.net + stampDuty + vat;
+
+  return {
+    status: "คำนวณจากอัตราสาธารณะ",
+    priceLabel: "เบี้ยรวมอากรและ VAT",
+    price: formatCurrency(total),
+    caption: `เบี้ยสุทธิ ${formatCurrency(rate.net)} · อากร ${formatCurrency(stampDuty)} · VAT ${formatCurrency(vat)}`,
+    details: [
+      ["ประเภทรถ", rate.label],
+      ["เบี้ยสุทธิ", formatCurrency(rate.net)],
+      ["อากรแสตมป์", formatCurrency(stampDuty)],
+      ["ภาษีมูลค่าเพิ่ม 7%", formatCurrency(vat)]
+    ],
+    source: sourceLink(officialRateSources.compulsory)
+  };
+}
+
+function buildQuoteRequest(plan, formData) {
+  const details = [];
+  const ignoredFields = new Set(["premiumCategory", "premiumPlan"]);
+
+  for (const [key, value] of formData.entries()) {
+    if (ignoredFields.has(key) || !value) continue;
+    details.push([getFieldLabel(key), formatFieldValue(key, value)]);
+  }
+
+  const verifiedNotes = [];
+  if (plan.id === "motor-permpoon") {
+    const discounts = { "0": 0, "1": 500, "2": 900, "3": 1200 };
+    const discount = discounts[formData.get("noClaimYears")] || 0;
+    if (discount) verifiedNotes.push(`ส่วนลดประวัติไม่มีเคลมที่เผยแพร่: ${formatCurrency(discount)}`);
+  }
+  if (["motor-extra", "motor-eco"].includes(plan.id) && formData.get("hasWrap") === "yes") {
+    verifiedNotes.push("ค่าเพิ่มสำหรับ Wrap / Sticker รอบคันที่หน้าแผนระบุ: 2,000 บาท/คัน");
+  }
+
+  return {
+    status: "ใบขอคำนวณเบี้ย — รอฝ่ายรับประกัน",
+    priceLabel: "เบี้ยประกัน",
+    price: "รอใบเสนอราคา",
+    caption: verifiedNotes.length
+      ? verifiedNotes.join(" · ")
+      : "ต้องใช้ตารางรุ่นรถ/ทุน/อาชีพ/ทรัพย์สิน และผลพิจารณารับประกันของบริษัท",
+    details,
+    source: `${sourceLink(officialRateSources.products)}${verifiedNotes.length ? `<br>${verifiedNotes.join("<br>")}` : ""}`
+  };
+}
+
+function sourceLink(source) {
+  return `แหล่งข้อมูล: <a href="${source.url}" target="_blank" rel="noopener">${source.label}</a><br>${source.effective}`;
+}
+
+function getFieldLabel(fieldName) {
+  const label = premiumCalculator?.querySelector(`[name="${fieldName}"]`)?.closest(".form-row")?.querySelector("label");
+  return label?.textContent.trim() || fieldName;
+}
+
+function formatFieldValue(fieldName, value) {
+  const field = premiumCalculator?.querySelector(`[name="${fieldName}"]`);
+  if (field?.tagName === "SELECT") {
+    return field.selectedOptions[0]?.textContent.trim() || value;
+  }
+  if (/Value|Amount|Revenue/i.test(fieldName)) {
+    return formatCurrency(Number(value));
+  }
+  return value;
 }
 
 function createPlan(id, category, icon, title, lead, audience, coverage, premium, exclusions, preparation) {
@@ -321,7 +562,7 @@ function createPlan(id, category, icon, title, lead, audience, coverage, premium
     premium,
     exclusions,
     preparation,
-    premiumLabel: category === "motor" && id === "motor-compulsory"
+    premiumLabel: ["motor-compulsory", "fuel-ctp"].includes(id)
       ? "อัตราตามประเภทรถ"
       : "คำนวณตามข้อมูลจริง"
   };
@@ -394,7 +635,14 @@ function openProductDetail(productId) {
   renderList("#product-dialog-preparation", product.preparation);
 
   const primaryButton = document.querySelector("#product-dialog-primary");
-  primaryButton.hidden = product.category !== "motor";
+  primaryButton.hidden = false;
+  primaryButton.textContent = isOfficialRatePlan(product.id)
+    ? "คำนวณเบี้ยแผนนี้"
+    : "ขอคำนวณเบี้ยแผนนี้";
+  primaryButton.dataset.planId = product.id;
+  primaryButton.href = premiumCalculator
+    ? "#premium-check"
+    : `index.html?plan=${encodeURIComponent(product.id)}#premium-check`;
   productDialog.showModal();
 }
 

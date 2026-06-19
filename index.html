@@ -88,13 +88,14 @@
         <div class="premium-check__intro">
           <p class="eyebrow eyebrow--dark"><span></span> DIY Premium Planner</p>
           <h2 id="premium-title">ลองวางแผน<br>งบประกันด้วยตัวเอง</h2>
-          <p>เลือกข้อมูลเบื้องต้นเพื่อดูช่วงงบประมาณ เปรียบเทียบแผน และสร้างใบสรุปสำหรับพิมพ์หรือบันทึกเป็น PDF</p>
+          <p>เลือกหมวดและแผนที่สนใจ ระบบจะคำนวณอัตราจริงเมื่อมีตารางสาธารณะ หรือจัดทำใบขอคำนวณเบี้ยพร้อมข้อมูลครบถ้วนสำหรับแผนที่ต้องผ่านการพิจารณารับประกัน</p>
           <ul>
-            <li>คำนวณทันทีในเบราว์เซอร์</li>
+            <li>รองรับทุกแผนในศูนย์ข้อมูล</li>
+            <li>พ.ร.บ. คำนวณจากอัตราที่เผยแพร่จริง</li>
             <li>ไม่ส่งข้อมูลออกจากอุปกรณ์</li>
             <li>Export ใบสรุปเป็น PDF ได้</li>
           </ul>
-          <p class="estimate-warning">ตัวเลขเป็นเพียงประมาณการสำหรับ Demo ไม่ใช่ใบเสนอราคา เบี้ยจริงขึ้นกับรายละเอียดรถ ประวัติผู้ขับขี่ เงื่อนไขรับประกัน และการพิจารณาของบริษัท</p>
+          <p class="estimate-warning">ระบบจะไม่สร้างตัวเลขประมาณการสำหรับแผนที่บริษัทไม่ได้เผยแพร่ฐานเบี้ยสาธารณะ เพื่อป้องกันข้อมูลคลาดเคลื่อน แผนดังกล่าวจะแสดงสถานะ “รอใบเสนอราคา”</p>
         </div>
 
         <form class="premium-calculator" id="premium-calculator">
@@ -107,43 +108,24 @@
           </div>
           <div class="form-grid">
             <div class="form-row">
-              <label for="vehicle-type">ประเภทรถ</label>
-              <select id="vehicle-type" name="vehicleType" required>
-                <option value="sedan">รถเก๋ง / Eco Car</option>
-                <option value="suv">SUV / PPV</option>
-                <option value="pickup">รถกระบะ</option>
-                <option value="ev">รถยนต์ไฟฟ้า EV</option>
+              <label for="premium-category">หมวดประกัน</label>
+              <select id="premium-category" name="premiumCategory" required>
+                <option value="motor">รถยนต์</option>
+                <option value="property">บ้านและทรัพย์สิน</option>
+                <option value="personal">บุคคล</option>
+                <option value="business">ธุรกิจ</option>
+                <option value="specialty">เฉพาะทาง</option>
               </select>
             </div>
             <div class="form-row">
-              <label for="coverage-type">ประเภทความคุ้มครอง</label>
-              <select id="coverage-type" name="coverageType" required>
-                <option value="type1">ประเภท 1</option>
-                <option value="type2plus">ประเภท 2+</option>
-                <option value="type3plus">ประเภท 3+</option>
-                <option value="type3">ประเภท 3</option>
-                <option value="compulsory">พ.ร.บ. เท่านั้น</option>
-              </select>
-            </div>
-            <div class="form-row">
-              <label for="vehicle-year">ปีจดทะเบียนรถ</label>
-              <input id="vehicle-year" name="vehicleYear" type="number" min="2000" max="2026" value="2022" required>
-            </div>
-            <div class="form-row">
-              <label for="vehicle-value">มูลค่ารถโดยประมาณ (บาท)</label>
-              <input id="vehicle-value" name="vehicleValue" type="number" min="100000" max="10000000" step="10000" value="600000" required>
+              <label for="premium-plan">แผน / ประเภท</label>
+              <select id="premium-plan" name="premiumPlan" required></select>
             </div>
           </div>
-          <div class="form-row">
-            <label for="driver-profile">ลักษณะการใช้งาน</label>
-            <select id="driver-profile" name="driverProfile">
-              <option value="personal">ใช้ส่วนบุคคลทั่วไป</option>
-              <option value="frequent">เดินทางบ่อย / ระยะทางสูง</option>
-              <option value="business">ใช้ในกิจการ</option>
-            </select>
-          </div>
+          <div class="calculator-mode" id="calculator-mode" role="status"></div>
+          <div id="premium-dynamic-fields"></div>
           <button class="button button--primary button--submit" type="submit">
-            คำนวณและสร้างใบสรุป
+            <span id="premium-submit-label">คำนวณและสร้างใบสรุป</span>
             <svg aria-hidden="true" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg>
           </button>
         </form>
@@ -421,10 +403,11 @@
       </div>
       <div class="summary-details" id="summary-details"></div>
       <div class="summary-price">
-        <span>ช่วงงบประมาณต่อปี</span>
+        <span id="summary-price-label">เบี้ยประกันรวม</span>
         <strong id="summary-price"></strong>
-        <small>ประมาณการรวมภาษีและอากรสำหรับ Demo</small>
+        <small id="summary-price-caption"></small>
       </div>
+      <div class="summary-source" id="summary-source"></div>
       <div class="summary-notes">
         <h3>หมายเหตุสำคัญ</h3>
         <p>เอกสารนี้ไม่ใช่กรมธรรม์หรือใบเสนอราคา เบี้ยและความคุ้มครองจริงขึ้นกับข้อมูลรถ ผู้ขับขี่ ทุนประกัน เงื่อนไข และการพิจารณารับประกันภัยของบริษัท</p>
