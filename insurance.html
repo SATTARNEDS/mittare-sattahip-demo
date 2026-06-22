@@ -86,8 +86,27 @@
       </div>
       <div class="product-dialog__notice">ข้อมูลนี้เป็นสรุปสำหรับ Demo ไม่ใช่ข้อเสนอขายหรือส่วนหนึ่งของกรมธรรม์ กรุณาตรวจสอบเงื่อนไขฉบับเต็มก่อนตัดสินใจ</div>
       <div class="product-dialog__actions">
+        <button class="button button--primary" id="product-dialog-document" type="button" hidden>เปิดเอกสาร PDF ฉบับเต็ม</button>
         <a class="button button--primary" href="index.html#premium-check" id="product-dialog-primary">ทดลองเช็กเบี้ย DIY</a>
         <a class="button button--dark" href="https://line.me/R/ti/p/@mittaresattahipdemo" target="_blank" rel="noopener">คุยผ่าน LINE</a>
+      </div>
+    </div>
+  </dialog>
+
+  <dialog class="pdf-dialog" id="pdf-dialog" aria-labelledby="pdf-dialog-title">
+    <header class="pdf-dialog__header">
+      <div>
+        <h2 id="pdf-dialog-title">เอกสารประกันฉบับเต็ม</h2>
+        <span id="document-page-status"></span>
+      </div>
+      <button class="dialog-close" type="button" aria-label="ปิดเอกสาร">×</button>
+    </header>
+    <div class="document-viewer">
+      <iframe id="pdf-viewer" title="เอกสารประกันฉบับเต็ม" hidden></iframe>
+      <div class="document-gallery" id="document-gallery" hidden>
+        <button class="document-nav document-nav--previous" id="document-previous" type="button" aria-label="รูปก่อนหน้า">‹</button>
+        <img id="document-image" src="" alt="">
+        <button class="document-nav document-nav--next" id="document-next" type="button" aria-label="รูปถัดไป">›</button>
       </div>
     </div>
   </dialog>

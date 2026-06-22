@@ -4,6 +4,7 @@ const quoteForm = document.querySelector("#quote-form");
 const successMessage = document.querySelector(".form-success");
 const profileDialog = document.querySelector("#profile-dialog");
 const productDialog = document.querySelector("#product-dialog");
+const pdfDialog = document.querySelector("#pdf-dialog");
 const premiumDialog = document.querySelector("#premium-dialog");
 const premiumCalculator = document.querySelector("#premium-calculator");
 
@@ -14,15 +15,19 @@ const profileData = {
     image: "assets/thepa.png",
     summary: "เลขที่ใบอนุญาตผู้แนะนำการประกันวินาศภัย 6602003031 ",
     highlights: ["วางแผนความคุ้มครอง", "พัฒนาทีมงาน", "ประสานงานลูกค้า"],
-    phone: "0924575836"
+    phone: "0924575836",
+    lineUrl: "https://line.me/ti/p/~tepa33",
+    facebookUrl: "https://www.facebook.com/thepha.sar.kal.mitrth.prakan.phay"
   },
   phannee: {
     name: "พรรณี สารกาล",
     role: "ผู้จัดการฝ่ายขายและขยายงาน",
-    image: "assets/phannee-saraphon-patterned.png",
+    image: "assets/pannee.png",
     summary: "เลขที่ใบอนุญาตผู้แนะนำการประกันวินาศภัย 6602003361 ",
     highlights: ["ดูแลลูกค้า", "ประสานงานบริการ", "ให้คำปรึกษาเบื้องต้น"],
-    phone: "0811759296"
+    phone: "0811759296",
+    lineUrl: "https://line.me/ti/p/~Pannee556",
+    facebookUrl: "https://www.facebook.com/phrrni.sar.kal.mitrth.prakan.phay"
   }
 };
 
@@ -77,6 +82,65 @@ const insurancePlans = [
   createPlan("fuel-station", "specialty", "สถานี", "ประกันภัยสถานีบริการเชื้อเพลิง", "วางแผนทรัพย์สิน ความรับผิด และความเสี่ยงเฉพาะของสถานีบริการ", ["สถานีบริการน้ำมัน LPG หรือ NGV", "ผู้ประกอบการที่มีถังและระบบเชื้อเพลิง"], ["อัคคีภัยและทรัพย์สินตามเงื่อนไข", "ความรับผิดต่อบุคคลภายนอก", "ความเสี่ยงเฉพาะระบบเชื้อเพลิงเมื่อระบุ"], ["ชนิดเชื้อเพลิง ความจุถัง และที่ตั้ง", "มาตรฐานระบบและการตรวจสอบ", "มูลค่าทรัพย์สินและรายได้"], ["การฝ่าฝืนมาตรฐานความปลอดภัย", "การรั่วไหลหรือมลภาวะที่ไม่ได้ซื้อเพิ่ม", "การเสื่อมสภาพของอุปกรณ์"], ["ใบอนุญาตสถานี", "แผนผังและระบบดับเพลิง", "รายงานตรวจสอบ"]),
   createPlan("fuel-ctp", "specialty", "พ.ร.บ.", "พ.ร.บ. รถบรรทุก LPG / NGV / น้ำมัน", "ประกันภัยภาคบังคับสำหรับรถตามประเภทเชื้อเพลิงและการจดทะเบียน", ["รถบรรทุกหรือรถที่จดทะเบียนใช้ LPG, NGV หรือน้ำมัน", "ผู้ประกอบการที่ต้องต่อทะเบียนและภาษี"], ["ความคุ้มครองผู้ประสบภัยจากรถตามกฎหมาย", "ค่าเสียหายเบื้องต้นและผลประโยชน์ตามสถานะ"], ["ประเภทรถ น้ำหนัก และลักษณะการใช้", "ประเภทเชื้อเพลิงตามทะเบียน"], ["ไม่คุ้มครองตัวรถหรือสินค้า", "วงเงินเป็นไปตามกฎหมาย"], ["ทะเบียนรถ", "ข้อมูลประเภทเชื้อเพลิง"])
 ];
+
+// ผูกเอกสารในโฟลเดอร์ document: ใช้ PDF ก่อน หากไม่มีจึงแสดงรูปตามลำดับ
+const insuranceMedia = {
+  "motor-1": { folder: "รถยนต์ประเภท1", images: 6 },
+  "motor-2": null,
+  "motor-3": { folder: "รถยนต์ประเภท3", images: 7 },
+  "motor-2plus": { folder: "รถยนต์ประเภท2+", imageNames: ["0.jpg", "1.jpg", "2.jpg", "3.jpg", "4.jpg"] },
+  "motor-3plus": { folder: "รถยนต์ประเภท3+", pdf: "ป3+  ใหม่.pdf", images: 5 },
+  "motor-compulsory": null,
+  "motor-one": { folder: "มิตรแท้หนึ่งเดียว", images: 10 },
+  "motor-extra": null,
+  "motor-eco": null,
+  "motor-permpoon": { folder: "มิตรแท้เพิ่มพูน2+", pdf: "เพิ่มพูน 2+.pdf", images: 6 },
+  "motor-taweekoon": { folder: "มิตรแท้ทวีคูณ", images: 5 },
+  "motor-permpoon3": { folder: "มิตรแท้เพิ่มพูน3+", images: 5 },
+  "residential-fire": { folder: "อัคคีภัย", images: 2 },
+  home: null,
+  "property-risk": null,
+  construction: null,
+  pa1: { folder: "อุบัติเหตุส่วนบุคคล อบ.1", images: 2 },
+  pa2: null,
+  "income-hospital": { folder: "ชดเชยรายได้กรณีเข้ารักษาจากอุบัติเหตุ", images: 4 },
+  golf: { folder: "ประกันภัยสำหรับผู้เล่นกอล์ฟ", images: 4 },
+  sme: null,
+  "public-liability": null,
+  carrier: null,
+  "inland-named": null,
+  "inland-allrisk": null,
+  "gold-shop": null,
+  drone: { folder: "ประกันภัยอากาศยานซึ่งไม่มีนักบิน", images: 3 },
+  "fuel-station": { folder: "ประกันภัยสถานีบริการเชื้อเพลิง", images: 3 },
+  "fuel-ctp": null
+};
+
+const premiumCheckPlanIds = new Set(["motor-1", "motor-one", "motor-extra"]);
+
+const officialProductUrls = {
+  motor: "https://www.mittare.com/motor-insurance/",
+  "residential-fire": "https://www.mittare.com/residential-fire-insurance/",
+  home: "https://www.mittare.com/home-insurance/",
+  "property-risk": "https://www.mittare.com/property-risk-insurance/",
+  construction: "https://www.mittare.com/construction-insurance/",
+  pa1: "https://www.mittare.com/personal-accident-insurance-1/",
+  pa2: "https://www.mittare.com/personal-accident-insurance-2/",
+  "income-hospital": "https://www.mittare.com/income-hospitalization-insurance/",
+  golf: "https://www.mittare.com/golf-insurance/",
+  sme: "https://www.mittare.com/retail-sme-insurance/",
+  "public-liability": "https://www.mittare.com/public-liability-insurance/",
+  carrier: "https://www.mittare.com/carrier-insurance/",
+  "inland-named": "https://www.mittare.com/inland-transit-insurance-named-perils/",
+  "inland-allrisk": "https://www.mittare.com/inland-transit-insurance-all-risks/",
+  "gold-shop": "https://www.mittare.com/gold-shop-insurance/",
+  drone: "https://www.mittare.com/drone-insurance/",
+  "fuel-station": "https://www.mittare.com/fuel-station-insurance/",
+  "fuel-ctp": "https://www.mittare.com/all-products/"
+};
+
+let activeDocumentImages = [];
+let activeDocumentImageIndex = 0;
 
 const officialRateSources = {
   compulsory: {
@@ -172,6 +236,10 @@ document.querySelectorAll(".profile-trigger").forEach((button) => {
       .map((highlight) => `<span>${highlight}</span>`)
       .join("");
     document.querySelector("#profile-phone").href = `tel:${profile.phone}`;
+    document.querySelector("#profile-line").href = profile.lineUrl;
+    document.querySelector("#profile-line").setAttribute("aria-label", `เพิ่มเพื่อน LINE ${profile.name}`);
+    document.querySelector("#profile-facebook").href = profile.facebookUrl;
+    document.querySelector("#profile-facebook").setAttribute("aria-label", `เปิด Facebook ${profile.name}`);
 
     profileDialog.showModal();
   });
@@ -235,9 +303,15 @@ document.querySelector("#insurance-search")?.addEventListener("input", (event) =
 });
 
 document.querySelector("#plan-grid")?.addEventListener("click", (event) => {
-  const button = event.target.closest(".product-detail-trigger");
-  if (!button) return;
-  openProductDetail(button.dataset.product);
+  const trigger = event.target.closest(".product-detail-trigger");
+  if (!trigger) return;
+
+  if (trigger.dataset.planDocument) {
+    openPlanDocument(trigger.dataset.planDocument);
+    return;
+  }
+
+  openProductDetail(trigger.dataset.product);
 });
 
 document.querySelector("#product-dialog-primary")?.addEventListener("click", () => {
@@ -248,14 +322,36 @@ document.querySelector("#product-dialog-primary")?.addEventListener("click", () 
   productDialog?.close();
 });
 
+document.querySelector("#product-dialog-document")?.addEventListener("click", (event) => {
+  const planId = event.currentTarget.dataset.planDocument;
+  if (!planId) return;
+
+  productDialog?.close();
+  openPlanDocument(planId);
+});
+
 document.querySelectorAll(".dialog-close").forEach((button) => {
   button.addEventListener("click", () => button.closest("dialog")?.close());
 });
 
-[profileDialog, productDialog, premiumDialog].forEach((dialog) => {
+[profileDialog, productDialog, pdfDialog, premiumDialog].forEach((dialog) => {
   dialog?.addEventListener("click", (event) => {
     if (event.target === dialog) dialog.close();
   });
+});
+
+pdfDialog?.addEventListener("close", () => {
+  const viewer = document.querySelector("#pdf-viewer");
+  if (viewer) viewer.removeAttribute("src");
+  activeDocumentImages = [];
+  activeDocumentImageIndex = 0;
+});
+
+document.querySelector("#document-previous")?.addEventListener("click", () => changeDocumentImage(-1));
+document.querySelector("#document-next")?.addEventListener("click", () => changeDocumentImage(1));
+pdfDialog?.addEventListener("keydown", (event) => {
+  if (event.key === "ArrowLeft") changeDocumentImage(-1);
+  if (event.key === "ArrowRight") changeDocumentImage(1);
 });
 
 initializePremiumCalculator();
@@ -345,7 +441,10 @@ function populatePremiumPlans() {
   const planSelect = document.querySelector("#premium-plan");
   if (!categorySelect || !planSelect) return;
 
-  const plans = insurancePlans.filter((plan) => plan.category === categorySelect.value);
+  const plans = insurancePlans.filter((plan) => {
+    if (plan.category !== categorySelect.value) return false;
+    return plan.category !== "motor" || premiumCheckPlanIds.has(plan.id);
+  });
   planSelect.innerHTML = plans
     .map((plan) => `<option value="${plan.id}">${plan.title}</option>`)
     .join("");
@@ -355,7 +454,8 @@ function selectCalculatorPlan(planId) {
   const plan = insurancePlans.find((item) => item.id === planId);
   const categorySelect = document.querySelector("#premium-category");
   const planSelect = document.querySelector("#premium-plan");
-  if (!plan || !categorySelect || !planSelect) return;
+  const canCheckPremium = plan && (plan.category !== "motor" || premiumCheckPlanIds.has(plan.id));
+  if (!canCheckPremium || !categorySelect || !planSelect) return;
 
   categorySelect.value = plan.category;
   populatePremiumPlans();
@@ -710,6 +810,7 @@ function formatFieldValue(fieldName, value) {
 }
 
 function createPlan(id, category, icon, title, lead, audience, coverage, premium, exclusions, preparation) {
+  const isTypeOneMotorPlan = ["motor-1", "motor-one", "motor-extra"].includes(id);
   return {
     id,
     category,
@@ -723,8 +824,35 @@ function createPlan(id, category, icon, title, lead, audience, coverage, premium
     preparation,
     premiumLabel: ["motor-compulsory", "fuel-ctp"].includes(id)
       ? "อัตราตามประเภทรถ"
-      : "คำนวณตามข้อมูลจริง"
+      : isTypeOneMotorPlan
+        ? "เช็กเบี้ยตามข้อมูลรถ"
+        : category === "motor"
+          ? "ราคาตามเอกสารแผน"
+          : "คำนวณตามข้อมูลจริง"
   };
+}
+
+function encodeDocumentPath(...segments) {
+  return ["document", ...segments].map((segment) => encodeURIComponent(segment)).join("/");
+}
+
+function getInsuranceMedia(planId) {
+  const config = insuranceMedia[planId];
+  if (!config) return null;
+
+  const imageNames = config.imageNames
+    || Array.from({ length: config.images || 0 }, (_, index) => `${index + 1}.jpg`);
+
+  return {
+    pdfUrl: config.pdf ? encodeDocumentPath(config.folder, config.pdf) : "",
+    imageUrls: imageNames.map((fileName) => encodeDocumentPath(config.folder, fileName))
+  };
+}
+
+function getOfficialProductUrl(product) {
+  return officialProductUrls[product.id]
+    || officialProductUrls[product.category]
+    || "https://www.mittare.com/all-products/";
 }
 
 function renderInsurancePlans() {
@@ -753,9 +881,13 @@ function renderInsurancePlans() {
         <span>แนวทางเบี้ยประกัน</span>
         <strong>${plan.premiumLabel}</strong>
       </div>
-      <button class="product-detail-trigger" type="button" data-product="${plan.id}">
-        เปิดข้อมูลฉบับเต็ม <span aria-hidden="true">→</span>
-      </button>
+      ${getInsuranceMedia(plan.id)
+        ? `<button class="product-detail-trigger" type="button" data-plan-document="${plan.id}">
+            เปิดเอกสารผลิตภัณฑ์ <span aria-hidden="true">→</span>
+          </button>`
+        : `<button class="product-detail-trigger" type="button" data-product="${plan.id}">
+            ดูข้อมูลฉบับละเอียด <span aria-hidden="true">→</span>
+          </button>`}
     </article>
   `).join("");
 }
@@ -793,16 +925,104 @@ function openProductDetail(productId) {
   renderList("#product-dialog-exclusions", product.exclusions);
   renderList("#product-dialog-preparation", product.preparation);
 
+  const notice = document.querySelector(".product-dialog__notice");
+  if (notice) {
+    notice.innerHTML = `
+      <strong>ข้อมูลสำคัญก่อนตัดสินใจ</strong><br>
+      ข้อมูลนี้เรียบเรียงตามประเภทผลิตภัณฑ์เพื่อช่วยทำความเข้าใจความคุ้มครอง ปัจจัยรับประกัน
+      ข้อยกเว้น และเอกสารที่ควรเตรียม เงื่อนไขที่มีผลบังคับจริงให้ยึดกรมธรรม์ ตารางกรมธรรม์
+      เอกสารแนบท้าย และการพิจารณารับประกันภัยของบริษัท
+      <br><a href="${getOfficialProductUrl(product)}" target="_blank" rel="noopener">ตรวจสอบข้อมูลผลิตภัณฑ์ต้นฉบับจากมิตรแท้ประกันภัย ↗</a>
+    `;
+  }
+
   const primaryButton = document.querySelector("#product-dialog-primary");
-  primaryButton.hidden = false;
-  primaryButton.textContent = isOfficialRatePlan(product.id)
-    ? "คำนวณเบี้ยแผนนี้"
+  const canCheckPremium = product.category !== "motor" || premiumCheckPlanIds.has(product.id);
+  primaryButton.hidden = !canCheckPremium;
+  primaryButton.textContent = product.category === "motor"
+    ? "เช็กเบี้ยแผนประเภท 1 นี้"
     : "ประมาณการแผนนี้";
   primaryButton.dataset.planId = product.id;
   primaryButton.href = premiumCalculator
     ? "#premium-check"
     : `index.html?plan=${encodeURIComponent(product.id)}#premium-check`;
+
+  const documentButton = document.querySelector("#product-dialog-document");
+  const media = getInsuranceMedia(product.id);
+  if (documentButton) {
+    documentButton.hidden = !media;
+    documentButton.dataset.planDocument = media ? product.id : "";
+  }
   productDialog.showModal();
+}
+
+function openPlanDocument(planId) {
+  const product = insurancePlans.find((plan) => plan.id === planId);
+  const media = getInsuranceMedia(planId);
+  if (!product || !media) {
+    openProductDetail(planId);
+    return;
+  }
+
+  if (media.pdfUrl) {
+    openPdfDocument(media.pdfUrl, product.title);
+    return;
+  }
+
+  openImageDocument(media.imageUrls, product.title);
+}
+
+function openPdfDocument(documentUrl, documentTitle) {
+  const viewer = document.querySelector("#pdf-viewer");
+  const gallery = document.querySelector("#document-gallery");
+  const title = document.querySelector("#pdf-dialog-title");
+  const status = document.querySelector("#document-page-status");
+  if (!documentUrl || !viewer || !pdfDialog) return;
+
+  title.textContent = documentTitle;
+  status.textContent = "เอกสาร PDF";
+  gallery.hidden = true;
+  viewer.hidden = false;
+  viewer.src = documentUrl;
+  pdfDialog.showModal();
+}
+
+function openImageDocument(imageUrls, documentTitle) {
+  const viewer = document.querySelector("#pdf-viewer");
+  const gallery = document.querySelector("#document-gallery");
+  const title = document.querySelector("#pdf-dialog-title");
+  if (!imageUrls.length || !gallery || !pdfDialog) return;
+
+  activeDocumentImages = imageUrls;
+  activeDocumentImageIndex = 0;
+  title.textContent = documentTitle;
+  viewer.hidden = true;
+  viewer.removeAttribute("src");
+  gallery.hidden = false;
+  renderDocumentImage();
+  pdfDialog.showModal();
+}
+
+function changeDocumentImage(direction) {
+  if (activeDocumentImages.length < 2) return;
+  activeDocumentImageIndex = (
+    activeDocumentImageIndex + direction + activeDocumentImages.length
+  ) % activeDocumentImages.length;
+  renderDocumentImage();
+}
+
+function renderDocumentImage() {
+  const image = document.querySelector("#document-image");
+  const status = document.querySelector("#document-page-status");
+  const previous = document.querySelector("#document-previous");
+  const next = document.querySelector("#document-next");
+  if (!image || !activeDocumentImages.length) return;
+
+  image.src = activeDocumentImages[activeDocumentImageIndex];
+  image.alt = `หน้าเอกสาร ${activeDocumentImageIndex + 1} จาก ${activeDocumentImages.length}`;
+  status.textContent = `หน้า ${activeDocumentImageIndex + 1} / ${activeDocumentImages.length}`;
+  previous.hidden = activeDocumentImages.length < 2;
+  next.hidden = activeDocumentImages.length < 2;
 }
 
 function getCategoryLabel(category) {
