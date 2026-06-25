@@ -1,4 +1,5 @@
-.agents/
-.codex/
-Thumbs.db
-.DS_Store
+instance/
+uploads/
+__pycache__/
+*.pyc
+.env

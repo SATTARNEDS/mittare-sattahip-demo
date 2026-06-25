@@ -1,0 +1,540 @@
+from __future__ import annotations
+
+import json
+import os
+import secrets
+import sqlite3
+from datetime import datetime, timezone
+from pathlib import Path
+from typing import Any
+
+from flask import (
+    Flask,
+    abort,
+    jsonify,
+    request,
+    send_from_directory,
+    session,
+)
+from werkzeug.exceptions import BadRequest, HTTPException
+from werkzeug.security import safe_join
+from werkzeug.utils import secure_filename
+
+
+BASE_DIR = Path(__file__).resolve().parent
+INSTANCE_DIR = BASE_DIR / "instance"
+UPLOAD_DIR = INSTANCE_DIR / "uploads"
+DATABASE_PATH = INSTANCE_DIR / "mittare.sqlite3"
+ALLOWED_UPLOAD_EXTENSIONS = {"jpg", "jpeg", "png", "webp", "pdf", "doc", "docx", "xls", "xlsx"}
+MAX_UPLOAD_BYTES = 8 * 1024 * 1024
+
+
+def create_app() -> Flask:
+    app = Flask(__name__, static_folder=None)
+    app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY", "dev-secret-change-before-production")
+    app.config["MAX_CONTENT_LENGTH"] = MAX_UPLOAD_BYTES
+    app.config["ADMIN_PASSWORD"] = os.environ.get("ADMIN_PASSWORD", "admin123")
+
+    INSTANCE_DIR.mkdir(exist_ok=True)
+    UPLOAD_DIR.mkdir(exist_ok=True)
+    initialize_database()
+
+    @app.errorhandler(HTTPException)
+    def handle_http_error(error: HTTPException):
+        return jsonify({"error": error.description}), error.code
+
+    @app.get("/")
+    def home():
+        return send_from_directory(BASE_DIR, "index.html")
+
+    @app.get("/<path:filename>")
+    def static_files(filename: str):
+        allowed_roots = ("assets/", "document/")
+        allowed_files = {
+            "index.html",
+            "insurance.html",
+            "agent-dashboard.html",
+            "customer-status.html",
+            "styles.css",
+            "script.js",
+            "agent-dashboard.js",
+            "customer-status.js",
+        }
+        if filename in allowed_files or filename.startswith(allowed_roots):
+            return send_from_directory(BASE_DIR, filename)
+        abort(404)
+
+    @app.get("/api/session")
+    def get_session():
+        return jsonify({"authenticated": is_authenticated()})
+
+    @app.post("/api/session")
+    def login():
+        data = request.get_json(silent=True) or {}
+        password = str(data.get("password", ""))
+        if not secrets.compare_digest(password, app.config["ADMIN_PASSWORD"]):
+            return jsonify({"error": "รหัสผ่านไม่ถูกต้อง"}), 401
+        session["admin_authenticated"] = True
+        return jsonify({"authenticated": True})
+
+    @app.delete("/api/session")
+    def logout():
+        session.clear()
+        return jsonify({"authenticated": False})
+
+    @app.get("/api/policies")
+    @require_admin
+    def list_policies():
+        with get_db() as db:
+            rows = db.execute("SELECT * FROM policies ORDER BY end_date ASC, updated_at DESC").fetchall()
+            return jsonify([policy_to_dict(db, row, include_private=True) for row in rows])
+
+    @app.delete("/api/policies")
+    @require_admin
+    def delete_all_policies():
+        with get_db() as db:
+            attachments = db.execute("SELECT stored_filename FROM attachments").fetchall()
+            db.execute("DELETE FROM policies")
+        for attachment in attachments:
+            delete_upload_file(attachment["stored_filename"])
+        return jsonify({"ok": True})
+
+    @app.post("/api/policies")
+    @require_admin
+    def create_policy():
+        payload = policy_payload_from_request()
+        now = utc_now()
+        public_ref = create_public_reference()
+        with get_db() as db:
+            cursor = db.execute(
+                """
+                INSERT INTO policies (
+                  public_ref, customer_name, customer_phone, line_name, assigned_agent,
+                  insurance_category, product_name, policy_number, insurer_name,
+                  start_date, end_date, premium_amount, sales_status, next_follow_up,
+                  customer_notes, created_at, updated_at
+                )
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    public_ref,
+                    payload["customer_name"],
+                    payload["customer_phone"],
+                    payload["line_name"],
+                    payload["assigned_agent"],
+                    payload["insurance_category"],
+                    payload["product_name"],
+                    payload["policy_number"],
+                    payload["insurer_name"],
+                    payload["start_date"],
+                    payload["end_date"],
+                    payload["premium_amount"],
+                    payload["sales_status"],
+                    payload["next_follow_up"],
+                    payload["customer_notes"],
+                    now,
+                    now,
+                ),
+            )
+            policy_id = cursor.lastrowid
+            save_uploaded_files(db, policy_id)
+            row = db.execute("SELECT * FROM policies WHERE id = ?", (policy_id,)).fetchone()
+            return jsonify(policy_to_dict(db, row, include_private=True)), 201
+
+    @app.put("/api/policies/<int:policy_id>")
+    @require_admin
+    def update_policy(policy_id: int):
+        payload = policy_payload_from_request()
+        with get_db() as db:
+            existing = db.execute("SELECT id FROM policies WHERE id = ?", (policy_id,)).fetchone()
+            if not existing:
+                return jsonify({"error": "ไม่พบกรมธรรม์"}), 404
+            db.execute(
+                """
+                UPDATE policies
+                SET customer_name = ?, customer_phone = ?, line_name = ?, assigned_agent = ?,
+                    insurance_category = ?, product_name = ?, policy_number = ?, insurer_name = ?,
+                    start_date = ?, end_date = ?, premium_amount = ?, sales_status = ?,
+                    next_follow_up = ?, customer_notes = ?, updated_at = ?
+                WHERE id = ?
+                """,
+                (
+                    payload["customer_name"],
+                    payload["customer_phone"],
+                    payload["line_name"],
+                    payload["assigned_agent"],
+                    payload["insurance_category"],
+                    payload["product_name"],
+                    payload["policy_number"],
+                    payload["insurer_name"],
+                    payload["start_date"],
+                    payload["end_date"],
+                    payload["premium_amount"],
+                    payload["sales_status"],
+                    payload["next_follow_up"],
+                    payload["customer_notes"],
+                    utc_now(),
+                    policy_id,
+                ),
+            )
+            save_uploaded_files(db, policy_id)
+            row = db.execute("SELECT * FROM policies WHERE id = ?", (policy_id,)).fetchone()
+            return jsonify(policy_to_dict(db, row, include_private=True))
+
+    @app.delete("/api/policies/<int:policy_id>")
+    @require_admin
+    def delete_policy(policy_id: int):
+        with get_db() as db:
+            attachments = db.execute("SELECT stored_filename FROM attachments WHERE policy_id = ?", (policy_id,)).fetchall()
+            db.execute("DELETE FROM policies WHERE id = ?", (policy_id,))
+        for attachment in attachments:
+            delete_upload_file(attachment["stored_filename"])
+        return jsonify({"ok": True})
+
+    @app.delete("/api/attachments/<int:attachment_id>")
+    @require_admin
+    def delete_attachment(attachment_id: int):
+        with get_db() as db:
+            attachment = db.execute("SELECT stored_filename FROM attachments WHERE id = ?", (attachment_id,)).fetchone()
+            if not attachment:
+                return jsonify({"error": "ไม่พบไฟล์แนบ"}), 404
+            db.execute("DELETE FROM attachments WHERE id = ?", (attachment_id,))
+        delete_upload_file(attachment["stored_filename"])
+        return jsonify({"ok": True})
+
+    @app.get("/api/attachments/<int:attachment_id>")
+    @require_admin
+    def download_attachment(attachment_id: int):
+        with get_db() as db:
+            attachment = db.execute("SELECT * FROM attachments WHERE id = ?", (attachment_id,)).fetchone()
+            if not attachment:
+                abort(404)
+        safe_path = safe_join(str(UPLOAD_DIR), attachment["stored_filename"])
+        if not safe_path:
+            abort(404)
+        return send_from_directory(
+            UPLOAD_DIR,
+            attachment["stored_filename"],
+            as_attachment=True,
+            download_name=attachment["original_filename"],
+        )
+
+    @app.get("/api/export")
+    @require_admin
+    def export_policies():
+        with get_db() as db:
+            rows = db.execute("SELECT * FROM policies ORDER BY updated_at DESC").fetchall()
+            return jsonify({
+                "exportedAt": utc_now(),
+                "version": 2,
+                "policies": [policy_to_dict(db, row, include_private=True) for row in rows],
+            })
+
+    @app.post("/api/demo/seed")
+    @require_admin
+    def seed_demo_data():
+        with get_db() as db:
+            seed_demo_rows(db)
+            rows = db.execute("SELECT * FROM policies ORDER BY end_date ASC").fetchall()
+            return jsonify([policy_to_dict(db, row, include_private=True) for row in rows])
+
+    @app.post("/api/customer/policies")
+    def customer_policy_lookup():
+        data = request.get_json(silent=True) or {}
+        phone = normalize_phone(data.get("phone", ""))
+        reference = str(data.get("reference", "")).strip()
+        if len(phone) < 4 or not reference:
+            return jsonify({"error": "กรุณากรอกเบอร์โทรและเลขอ้างอิง"}), 400
+        with get_db() as db:
+            rows = db.execute(
+                """
+                SELECT * FROM policies
+                WHERE REPLACE(REPLACE(REPLACE(customer_phone, '-', ''), ' ', ''), '+66', '0') LIKE ?
+                  AND (public_ref = ? OR policy_number = ?)
+                ORDER BY end_date DESC
+                """,
+                (f"%{phone[-6:]}", reference, reference),
+            ).fetchall()
+            return jsonify([policy_to_dict(db, row, include_private=False) for row in rows])
+
+    return app
+
+
+def require_admin(view):
+    def wrapped(*args, **kwargs):
+        if not is_authenticated():
+            return jsonify({"error": "กรุณาเข้าสู่ระบบหลังบ้าน"}), 401
+        return view(*args, **kwargs)
+
+    wrapped.__name__ = view.__name__
+    return wrapped
+
+
+def is_authenticated() -> bool:
+    return bool(session.get("admin_authenticated"))
+
+
+def get_db() -> sqlite3.Connection:
+    db = sqlite3.connect(DATABASE_PATH)
+    db.row_factory = sqlite3.Row
+    db.execute("PRAGMA foreign_keys = ON")
+    return db
+
+
+def initialize_database() -> None:
+    with get_db() as db:
+        db.executescript(
+            """
+            CREATE TABLE IF NOT EXISTS policies (
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              public_ref TEXT NOT NULL UNIQUE,
+              customer_name TEXT NOT NULL,
+              customer_phone TEXT NOT NULL,
+              line_name TEXT DEFAULT '',
+              assigned_agent TEXT DEFAULT '',
+              insurance_category TEXT NOT NULL,
+              product_name TEXT DEFAULT '',
+              policy_number TEXT DEFAULT '',
+              insurer_name TEXT DEFAULT '',
+              start_date TEXT DEFAULT '',
+              end_date TEXT NOT NULL,
+              premium_amount REAL DEFAULT 0,
+              sales_status TEXT NOT NULL DEFAULT 'new',
+              next_follow_up TEXT DEFAULT '',
+              customer_notes TEXT DEFAULT '',
+              created_at TEXT NOT NULL,
+              updated_at TEXT NOT NULL
+            );
+
+            CREATE TABLE IF NOT EXISTS attachments (
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              policy_id INTEGER NOT NULL,
+              stored_filename TEXT NOT NULL,
+              original_filename TEXT NOT NULL,
+              mime_type TEXT DEFAULT '',
+              size_bytes INTEGER DEFAULT 0,
+              created_at TEXT NOT NULL,
+              FOREIGN KEY (policy_id) REFERENCES policies(id) ON DELETE CASCADE
+            );
+
+            CREATE INDEX IF NOT EXISTS idx_policies_end_date ON policies(end_date);
+            CREATE INDEX IF NOT EXISTS idx_policies_phone ON policies(customer_phone);
+            CREATE INDEX IF NOT EXISTS idx_attachments_policy ON attachments(policy_id);
+            """
+        )
+
+
+def policy_payload_from_request() -> dict[str, Any]:
+    form = request.form
+    customer_name = form.get("customerName", "").strip()
+    customer_phone = form.get("customerPhone", "").strip()
+    insurance_category = form.get("insuranceCategory", "").strip()
+    end_date = form.get("endDate", "").strip()
+    if not customer_name or not customer_phone or not insurance_category or not end_date:
+        raise BadRequest("กรุณากรอกชื่อลูกค้า เบอร์โทร ประเภทประกัน และวันหมดอายุ")
+    return {
+        "customer_name": customer_name,
+        "customer_phone": customer_phone,
+        "line_name": form.get("lineName", "").strip(),
+        "assigned_agent": form.get("assignedAgent", "").strip(),
+        "insurance_category": insurance_category,
+        "product_name": form.get("productName", "").strip(),
+        "policy_number": form.get("policyNumber", "").strip(),
+        "insurer_name": form.get("insurerName", "").strip(),
+        "start_date": form.get("startDate", "").strip(),
+        "end_date": end_date,
+        "premium_amount": parse_float(form.get("premiumAmount")),
+        "sales_status": form.get("salesStatus", "new").strip(),
+        "next_follow_up": form.get("nextFollowUp", "").strip(),
+        "customer_notes": form.get("customerNotes", "").strip(),
+    }
+
+
+def parse_float(value: Any) -> float:
+    try:
+        return float(value or 0)
+    except (TypeError, ValueError):
+        return 0
+
+
+def create_public_reference() -> str:
+    return f"MT4-{datetime.now().strftime('%y%m%d')}-{secrets.token_hex(3).upper()}"
+
+
+def save_uploaded_files(db: sqlite3.Connection, policy_id: int) -> None:
+    for file in request.files.getlist("policyFiles"):
+        if not file or not file.filename:
+            continue
+        original_filename = secure_filename(file.filename)
+        if not is_allowed_upload(original_filename):
+            raise BadRequest(f"ชนิดไฟล์ {file.filename} ยังไม่รองรับ")
+        stored_filename = f"{policy_id}-{secrets.token_hex(10)}-{original_filename}"
+        file.save(UPLOAD_DIR / stored_filename)
+        db.execute(
+            """
+            INSERT INTO attachments (policy_id, stored_filename, original_filename, mime_type, size_bytes, created_at)
+            VALUES (?, ?, ?, ?, ?, ?)
+            """,
+            (
+                policy_id,
+                stored_filename,
+                file.filename,
+                file.mimetype,
+                (UPLOAD_DIR / stored_filename).stat().st_size,
+                utc_now(),
+            ),
+        )
+
+
+def is_allowed_upload(filename: str) -> bool:
+    extension = filename.rsplit(".", 1)[-1].lower() if "." in filename else ""
+    return extension in ALLOWED_UPLOAD_EXTENSIONS
+
+
+def delete_upload_file(stored_filename: str) -> None:
+    target = UPLOAD_DIR / stored_filename
+    if target.exists() and target.is_file():
+        target.unlink()
+
+
+def policy_to_dict(db: sqlite3.Connection, row: sqlite3.Row, include_private: bool) -> dict[str, Any]:
+    policy = {
+        "id": row["id"] if include_private else None,
+        "publicRef": row["public_ref"],
+        "customerName": row["customer_name"],
+        "customerPhone": row["customer_phone"] if include_private else mask_phone(row["customer_phone"]),
+        "lineName": row["line_name"] if include_private else "",
+        "assignedAgent": row["assigned_agent"],
+        "insuranceCategory": row["insurance_category"],
+        "productName": row["product_name"],
+        "policyNumber": row["policy_number"],
+        "insurerName": row["insurer_name"],
+        "startDate": row["start_date"],
+        "endDate": row["end_date"],
+        "premiumAmount": row["premium_amount"],
+        "salesStatus": row["sales_status"],
+        "nextFollowUp": row["next_follow_up"] if include_private else "",
+        "customerNotes": row["customer_notes"] if include_private else customer_safe_note(row["customer_notes"]),
+        "createdAt": row["created_at"],
+        "updatedAt": row["updated_at"],
+    }
+    if include_private:
+        policy["attachments"] = [
+            {
+                "id": attachment["id"],
+                "name": attachment["original_filename"],
+                "type": attachment["mime_type"],
+                "size": attachment["size_bytes"],
+                "url": f"/api/attachments/{attachment['id']}",
+                "addedAt": attachment["created_at"],
+            }
+            for attachment in db.execute(
+                "SELECT * FROM attachments WHERE policy_id = ? ORDER BY created_at DESC",
+                (row["id"],),
+            ).fetchall()
+        ]
+    else:
+        policy["attachments"] = []
+    return policy
+
+
+def customer_safe_note(note: str) -> str:
+    if not note:
+        return ""
+    return note[:240]
+
+
+def normalize_phone(phone: str) -> str:
+    return "".join(character for character in str(phone) if character.isdigit())
+
+
+def mask_phone(phone: str) -> str:
+    normalized = normalize_phone(phone)
+    if len(normalized) < 6:
+        return "***"
+    return f"{normalized[:3]}-xxx-{normalized[-4:]}"
+
+
+def utc_now() -> str:
+    return datetime.now(timezone.utc).isoformat(timespec="seconds")
+
+
+def seed_demo_rows(db: sqlite3.Connection) -> None:
+    count = db.execute("SELECT COUNT(*) AS total FROM policies WHERE policy_number LIKE 'MT4-DEMO-%'").fetchone()["total"]
+    if count:
+        return
+    now = utc_now()
+    rows = [
+        {
+            "public_ref": "MT4-DEMO-001",
+            "customer_name": "สมชาย ใจดี",
+            "customer_phone": "081-111-2222",
+            "line_name": "somchai.line",
+            "assigned_agent": "เทพา",
+            "insurance_category": "รถยนต์",
+            "product_name": "ประเภท 1",
+            "policy_number": "MT4-DEMO-001",
+            "insurer_name": "มิตรแท้ประกันภัย",
+            "start_date": "2026-01-01",
+            "end_date": "2026-07-15",
+            "premium_amount": 14500,
+            "sales_status": "quoted",
+            "next_follow_up": "2026-06-25",
+            "customer_notes": "ส่งใบเสนอราคาแล้ว ลูกค้าขอเปรียบเทียบซ่อมห้างกับซ่อมอู่",
+        },
+        {
+            "public_ref": "MT4-DEMO-002",
+            "customer_name": "พิมพ์ชนก ร้านทะเล",
+            "customer_phone": "089-333-4444",
+            "line_name": "@shopsea",
+            "assigned_agent": "พรรณี",
+            "insurance_category": "ธุรกิจ",
+            "product_name": "SME",
+            "policy_number": "MT4-DEMO-002",
+            "insurer_name": "มิตรแท้ประกันภัย",
+            "start_date": "2025-06-20",
+            "end_date": "2026-06-23",
+            "premium_amount": 8600,
+            "sales_status": "documents",
+            "next_follow_up": "2026-06-24",
+            "customer_notes": "รอรูปหน้าร้านและรายการทรัพย์สิน",
+        },
+    ]
+    for row in rows:
+        db.execute(
+            """
+            INSERT INTO policies (
+              public_ref, customer_name, customer_phone, line_name, assigned_agent,
+              insurance_category, product_name, policy_number, insurer_name,
+              start_date, end_date, premium_amount, sales_status, next_follow_up,
+              customer_notes, created_at, updated_at
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                row["public_ref"],
+                row["customer_name"],
+                row["customer_phone"],
+                row["line_name"],
+                row["assigned_agent"],
+                row["insurance_category"],
+                row["product_name"],
+                row["policy_number"],
+                row["insurer_name"],
+                row["start_date"],
+                row["end_date"],
+                row["premium_amount"],
+                row["sales_status"],
+                row["next_follow_up"],
+                row["customer_notes"],
+                now,
+                now,
+            ),
+        )
+
+
+app = create_app()
+
+
+if __name__ == "__main__":
+    app.run(debug=True)

@@ -1,0 +1,342 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="แดชบอร์ดตัวแทน Mittare Sattahip สำหรับติดตามกรมธรรม์ สถานะงานขาย และเอกสารลูกค้า">
+  <meta name="theme-color" content="#075c55">
+  <title>แดชบอร์ดตัวแทน | Mittare Sattahip</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body class="agent-page">
+  <a class="skip-link" href="#main-content">ข้ามไปยังเนื้อหาหลัก</a>
+  <div class="service-bar" aria-label="แดชบอร์ดตัวแทน">
+    <div class="container service-bar__inner">
+      <p><span class="pulse" aria-hidden="true"></span> หลังบ้าน SQLite สำหรับใช้งานจริง</p>
+      <a href="index.html">กลับหน้าเว็บ</a>
+    </div>
+  </div>
+
+  <header class="site-header">
+    <div class="container nav-wrap">
+      <a class="brand" href="index.html" aria-label="Mittare Sattahip หน้าแรก">
+        <span class="brand__mark" aria-hidden="true">
+          <svg viewBox="0 0 64 64"><path d="M32 54S8 42 8 22C8 12 14 7 22 7c5 0 8 2 10 6 2-4 5-6 10-6 8 0 14 5 14 15 0 20-24 32-24 32Z"/><path d="m21 31 7 7 15-16"/></svg>
+        </span>
+        <span><strong>Mittare</strong><small>SATTAHIP</small></span>
+      </a>
+      <button class="menu-toggle" type="button" aria-expanded="false" aria-controls="main-navigation">
+        <span class="sr-only">เปิดเมนู</span>
+        <span></span><span></span><span></span>
+      </button>
+      <nav class="main-nav" id="main-navigation" aria-label="เมนูหลัก">
+        <a href="index.html">หน้าแรก</a>
+        <a href="insurance.html?category=motor">ศูนย์ข้อมูลประกัน</a>
+        <a href="customer-status.html">หน้าลูกค้า</a>
+        <a href="#policy-form">เพิ่มกรมธรรม์</a>
+        <a href="#policy-list">รายการติดตาม</a>
+        <a class="button button--small button--dark" href="#agent-tools">สำรองข้อมูล</a>
+        <button class="text-button" id="logout-button" type="button" hidden>ออกจากระบบ</button>
+      </nav>
+    </div>
+  </header>
+
+  <section class="agent-auth section" id="agent-auth" aria-labelledby="login-title">
+    <div class="container agent-auth__grid">
+      <div>
+        <p class="eyebrow eyebrow--dark"><span></span> Secure Workspace</p>
+        <h1 id="login-title">เข้าสู่ระบบหลังบ้าน</h1>
+        <p>ข้อมูลกรมธรรม์จะถูกเก็บใน SQLite บนเครื่องหรือเซิร์ฟเวอร์ที่รันระบบนี้ ไม่ใช่ในเบราว์เซอร์อีกต่อไป</p>
+      </div>
+      <form class="agent-form agent-login-form" id="agent-login-form">
+        <div class="form-row">
+          <label for="admin-password">รหัสผ่านหลังบ้าน</label>
+          <input id="admin-password" name="adminPassword" type="password" autocomplete="current-password" required>
+        </div>
+        <button class="button button--primary button--submit" type="submit">เข้าสู่ระบบ</button>
+        <p class="form-note" id="login-feedback" role="status" aria-live="polite">ค่าเริ่มต้นสำหรับทดสอบคือ admin123 กรุณาเปลี่ยนด้วยตัวแปร ADMIN_PASSWORD ก่อนใช้งานจริง</p>
+      </form>
+    </div>
+  </section>
+
+  <main id="main-content" hidden>
+    <section class="agent-hero" aria-labelledby="agent-title">
+      <div class="container agent-hero__grid">
+        <div>
+          <p class="eyebrow"><span></span> Agent Workspace</p>
+          <h1 id="agent-title">แดชบอร์ดติดตามกรมธรรม์และงานต่ออายุ</h1>
+          <p>จัดลำดับงานที่ต้องติดตาม สร้างข้อความเตือนแบบกดส่งเอง และเก็บเอกสารสำคัญของลูกค้าไว้ในเครื่องเดียว</p>
+        </div>
+        <div class="agent-hero__panel" aria-label="สรุปงานเร่งด่วน">
+          <span>งานที่ควรดูวันนี้</span>
+          <strong id="hero-due-count">0</strong>
+          <p id="hero-due-label">ยังไม่มีงานด่วน</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="agent-dashboard section" aria-labelledby="dashboard-title">
+      <div class="container">
+        <div class="section-heading agent-heading">
+          <div>
+            <p class="eyebrow eyebrow--dark"><span></span> Dashboard</p>
+            <h2 id="dashboard-title">ภาพรวมงานดูแลลูกค้า</h2>
+          </div>
+          <p>ข้อมูลทุกรายการบันทึกลง SQLite และไฟล์แนบเก็บในโฟลเดอร์อัปโหลดของระบบ เหมาะสำหรับนำขึ้นเซิร์ฟเวอร์จริง</p>
+        </div>
+
+        <div class="agent-stat-grid" aria-live="polite">
+          <article class="agent-stat-card agent-stat-card--alert">
+            <span>หมดอายุแล้ว</span>
+            <strong id="stat-overdue">0</strong>
+            <small>ควรติดต่อทันที</small>
+          </article>
+          <article class="agent-stat-card">
+            <span>ครบกำหนดใน 7 วัน</span>
+            <strong id="stat-due7">0</strong>
+            <small>เตรียมปิดงานต่ออายุ</small>
+          </article>
+          <article class="agent-stat-card">
+            <span>ครบกำหนดใน 30 วัน</span>
+            <strong id="stat-due30">0</strong>
+            <small>เริ่มเสนอแผนใหม่</small>
+          </article>
+          <article class="agent-stat-card">
+            <span>นัดติดตามวันนี้</span>
+            <strong id="stat-followup">0</strong>
+            <small>งานภายในสำหรับตัวแทน</small>
+          </article>
+        </div>
+
+        <div class="agent-alerts" id="agent-alerts" role="status" aria-live="polite"></div>
+      </div>
+    </section>
+
+    <section class="agent-workspace section" id="policy-form" aria-labelledby="form-title">
+      <div class="container agent-workspace__grid">
+        <form class="agent-form" id="agent-policy-form">
+          <div class="calculator-heading">
+            <div>
+              <span id="form-mode-number">01</span>
+              <h2 id="form-title">เพิ่มข้อมูลกรมธรรม์</h2>
+            </div>
+            <button class="text-button" type="reset">ล้างฟอร์ม</button>
+          </div>
+          <input type="hidden" id="policy-id" name="policyId">
+
+          <div class="form-grid">
+            <div class="form-row">
+              <label for="customer-name">ชื่อลูกค้า</label>
+              <input id="customer-name" name="customerName" type="text" autocomplete="name" required>
+            </div>
+            <div class="form-row">
+              <label for="customer-phone">เบอร์โทรศัพท์</label>
+              <input id="customer-phone" name="customerPhone" type="tel" autocomplete="tel" inputmode="tel" required>
+            </div>
+          </div>
+
+          <div class="form-grid">
+            <div class="form-row">
+              <label for="line-name">LINE / ช่องทางติดต่อ</label>
+              <input id="line-name" name="lineName" type="text" placeholder="@line หรือชื่อบัญชี">
+            </div>
+            <div class="form-row">
+              <label for="assigned-agent">ผู้ดูแล</label>
+              <input id="assigned-agent" name="assignedAgent" type="text" placeholder="เช่น เทพา / พรรณี">
+            </div>
+          </div>
+
+          <div class="form-grid">
+            <div class="form-row">
+              <label for="insurance-category">ประเภทประกัน</label>
+              <select id="insurance-category" name="insuranceCategory" required>
+                <option value="รถยนต์">รถยนต์</option>
+                <option value="พ.ร.บ.">พ.ร.บ.</option>
+                <option value="บ้านและทรัพย์สิน">บ้านและทรัพย์สิน</option>
+                <option value="อุบัติเหตุ/สุขภาพ">อุบัติเหตุ/สุขภาพ</option>
+                <option value="ธุรกิจ">ธุรกิจ</option>
+                <option value="เฉพาะทาง">เฉพาะทาง</option>
+              </select>
+            </div>
+            <div class="form-row">
+              <label for="product-name">แผน / ผลิตภัณฑ์</label>
+              <input id="product-name" name="productName" type="text" placeholder="เช่น ประเภท 1, 2+, อัคคีภัย">
+            </div>
+          </div>
+
+          <div class="form-grid">
+            <div class="form-row">
+              <label for="policy-number">เลขกรมธรรม์</label>
+              <input id="policy-number" name="policyNumber" type="text">
+            </div>
+            <div class="form-row">
+              <label for="insurer-name">บริษัท / แหล่งงาน</label>
+              <input id="insurer-name" name="insurerName" type="text" value="มิตรแท้ประกันภัย">
+            </div>
+          </div>
+
+          <div class="form-grid form-grid--thirds">
+            <div class="form-row">
+              <label for="start-date">วันเริ่มคุ้มครอง</label>
+              <input id="start-date" name="startDate" type="date">
+            </div>
+            <div class="form-row">
+              <label for="end-date">วันหมดอายุ</label>
+              <input id="end-date" name="endDate" type="date" required>
+            </div>
+            <div class="form-row">
+              <label for="premium-amount">เบี้ยประกัน</label>
+              <input id="premium-amount" name="premiumAmount" type="number" min="0" step="1" inputmode="decimal">
+            </div>
+          </div>
+
+          <div class="form-grid">
+            <div class="form-row">
+              <label for="sales-status">สถานะงานขาย</label>
+              <select id="sales-status" name="salesStatus" required>
+                <option value="new">ลูกค้าใหม่</option>
+                <option value="quoted">ส่งใบเสนอราคาแล้ว</option>
+                <option value="waiting">รอตัดสินใจ</option>
+                <option value="documents">รอเอกสาร</option>
+                <option value="payment">นัดชำระ</option>
+                <option value="renewed">ต่ออายุแล้ว</option>
+                <option value="claim-followup">ติดตามหลังเคลม</option>
+                <option value="lost">ปิดงานไม่สำเร็จ</option>
+              </select>
+            </div>
+            <div class="form-row">
+              <label for="next-follow-up">วันนัดติดตามครั้งถัดไป</label>
+              <input id="next-follow-up" name="nextFollowUp" type="date">
+            </div>
+          </div>
+
+          <div class="form-row">
+            <label for="customer-notes">บันทึกการดูแล / สิ่งที่ต้องทำต่อ</label>
+            <textarea id="customer-notes" name="customerNotes" rows="4" placeholder="เช่น โทรล่าสุด, เอกสารที่ยังขาด, เงื่อนไขที่ลูกค้าสนใจ"></textarea>
+          </div>
+
+          <div class="form-row">
+            <label for="policy-files">รูปภาพและไฟล์เอกสาร</label>
+            <input id="policy-files" name="policyFiles" type="file" accept="image/*,.pdf,.doc,.docx,.xls,.xlsx" multiple>
+            <p class="field-help">ไฟล์จะอัปโหลดเข้าเซิร์ฟเวอร์ แนะนำตั้งสิทธิ์โฟลเดอร์อัปโหลดและสำรองข้อมูลเป็นประจำ</p>
+          </div>
+
+          <div class="agent-form__attachments" id="current-attachments" hidden></div>
+
+          <button class="button button--primary button--submit" type="submit">
+            บันทึกข้อมูลกรมธรรม์
+            <svg aria-hidden="true" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg>
+          </button>
+          <p class="form-note" id="form-feedback" role="status" aria-live="polite">พร้อมบันทึกข้อมูลลง SQLite</p>
+        </form>
+
+        <aside class="agent-message-panel" aria-labelledby="message-title">
+          <p class="eyebrow eyebrow--dark"><span></span> Follow-up Message</p>
+          <h2 id="message-title">ข้อความติดตามแบบกดส่งเอง</h2>
+          <p>เลือกกรมธรรม์ในรายการ แล้วระบบจะสร้างข้อความสำหรับคัดลอกหรือเปิด LINE Share โดยไม่ใช้โควตา Push Message</p>
+          <div class="form-row">
+            <label for="message-tone">รูปแบบข้อความ</label>
+            <select id="message-tone">
+              <option value="renewal">เตือนต่ออายุ</option>
+              <option value="document">ขอเอกสารเพิ่มเติม</option>
+              <option value="payment">นัดชำระเบี้ย</option>
+              <option value="claim">ติดตามหลังเคลม</option>
+            </select>
+          </div>
+          <textarea class="agent-message-box" id="generated-message" rows="11" readonly placeholder="เลือกกรมธรรม์จากรายการเพื่อสร้างข้อความ"></textarea>
+          <div class="agent-message-actions">
+            <button class="button button--primary" id="copy-message" type="button">คัดลอกข้อความ</button>
+            <a class="button button--dark" id="open-line-share" href="#" target="_blank" rel="noopener" aria-disabled="true">เปิด LINE</a>
+          </div>
+          <p class="agent-note">LINE Share เป็นการเปิดหน้าส่งข้อความให้คุณกดส่งเอง ไม่ใช่การส่งอัตโนมัติถึงลูกค้าทุกคน</p>
+        </aside>
+      </div>
+    </section>
+
+    <section class="agent-list-section section" id="policy-list" aria-labelledby="policy-list-title">
+      <div class="container">
+        <div class="section-heading agent-heading">
+          <div>
+            <p class="eyebrow eyebrow--dark"><span></span> Policy Pipeline</p>
+            <h2 id="policy-list-title">รายการกรมธรรม์และสถานะงานขาย</h2>
+          </div>
+          <p>กรองงานตามสถานะ ค้นหาลูกค้า และเลือกหนึ่งรายการเพื่อสร้างข้อความติดตามหรือแก้ไขข้อมูล</p>
+        </div>
+
+        <div class="agent-toolbar">
+          <div class="insurance-search">
+            <svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>
+            <label class="sr-only" for="policy-search">ค้นหาลูกค้า</label>
+            <input id="policy-search" type="search" placeholder="ค้นหาชื่อ เบอร์ เลขกรมธรรม์ หรือแผน">
+          </div>
+          <div class="form-row agent-filter">
+            <label class="sr-only" for="status-filter">กรองสถานะ</label>
+            <select id="status-filter">
+              <option value="all">ทุกสถานะ</option>
+              <option value="new">ลูกค้าใหม่</option>
+              <option value="quoted">ส่งใบเสนอราคาแล้ว</option>
+              <option value="waiting">รอตัดสินใจ</option>
+              <option value="documents">รอเอกสาร</option>
+              <option value="payment">นัดชำระ</option>
+              <option value="renewed">ต่ออายุแล้ว</option>
+              <option value="claim-followup">ติดตามหลังเคลม</option>
+              <option value="lost">ปิดงานไม่สำเร็จ</option>
+            </select>
+          </div>
+          <button class="button button--dark" id="add-sample-data" type="button">เพิ่มข้อมูลตัวอย่าง</button>
+        </div>
+
+        <div class="agent-table-wrap">
+          <table class="agent-table">
+            <caption>รายการกรมธรรม์ที่บันทึกไว้</caption>
+            <thead>
+              <tr>
+                <th scope="col">ลูกค้า</th>
+                <th scope="col">กรมธรรม์</th>
+                <th scope="col">หมดอายุ</th>
+                <th scope="col">สถานะ</th>
+                <th scope="col">ติดตาม</th>
+                <th scope="col">จัดการ</th>
+              </tr>
+            </thead>
+            <tbody id="policy-table-body"></tbody>
+          </table>
+          <div class="plan-empty" id="policy-empty" hidden>
+            <strong>ยังไม่มีข้อมูลกรมธรรม์</strong>
+            <span>เริ่มจากเพิ่มข้อมูลลูกค้าหรือเพิ่มข้อมูลตัวอย่างเพื่อทดลองระบบ</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="agent-tools section" id="agent-tools" aria-labelledby="tools-title">
+      <div class="container agent-tools__grid">
+        <div>
+          <p class="eyebrow eyebrow--dark"><span></span> Backup</p>
+          <h2 id="tools-title">สำรองและย้ายข้อมูล</h2>
+          <p>Export ข้อมูลจาก SQLite เป็น JSON เพื่อสำรองหรือย้ายระบบ ไฟล์แนบควรสำรองจากโฟลเดอร์อัปโหลดร่วมด้วย</p>
+        </div>
+        <div class="agent-tool-card">
+          <button class="button button--primary" id="export-data" type="button">Export JSON</button>
+          <a class="button button--dark" href="customer-status.html">เปิดหน้าลูกค้าทดสอบ</a>
+          <button class="text-button agent-danger" id="clear-all-data" type="button">ลบข้อมูลทั้งหมดในฐานข้อมูล</button>
+          <p id="backup-feedback" role="status" aria-live="polite"></p>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer compact-footer">
+    <div class="container footer-bottom">
+      <p>© <span id="current-year"></span> Mittare Sattahip — Agent Dashboard</p>
+      <p>ข้อมูลเก็บใน SQLite และไฟล์แนบเก็บในเซิร์ฟเวอร์ที่รันระบบ</p>
+    </div>
+  </footer>
+
+  <script src="script.js"></script>
+  <script src="agent-dashboard.js"></script>
+</body>
+</html>

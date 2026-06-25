@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="หน้าลูกค้าทดลองเช็กสถานะกรมธรรม์ Mittare Sattahip ด้วยเบอร์โทรและเลขอ้างอิง">
+  <meta name="theme-color" content="#075c55">
+  <title>เช็กสถานะกรมธรรม์ | Mittare Sattahip</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body class="customer-page">
+  <a class="skip-link" href="#main-content">ข้ามไปยังเนื้อหาหลัก</a>
+  <div class="service-bar">
+    <div class="container service-bar__inner">
+      <p><span class="pulse" aria-hidden="true"></span> เช็กสถานะกรมธรรม์ด้วยตนเอง</p>
+      <a href="tel:1741">1741</a>
+    </div>
+  </div>
+
+  <header class="site-header">
+    <div class="container nav-wrap">
+      <a class="brand" href="index.html" aria-label="Mittare Sattahip หน้าแรก">
+        <span class="brand__mark" aria-hidden="true">
+          <svg viewBox="0 0 64 64"><path d="M32 54S8 42 8 22C8 12 14 7 22 7c5 0 8 2 10 6 2-4 5-6 10-6 8 0 14 5 14 15 0 20-24 32-24 32Z"/><path d="m21 31 7 7 15-16"/></svg>
+        </span>
+        <span><strong>Mittare</strong><small>SATTAHIP</small></span>
+      </a>
+      <button class="menu-toggle" type="button" aria-expanded="false" aria-controls="main-navigation">
+        <span class="sr-only">เปิดเมนู</span>
+        <span></span><span></span><span></span>
+      </button>
+      <nav class="main-nav" id="main-navigation" aria-label="เมนูหลัก">
+        <a href="index.html">หน้าแรก</a>
+        <a href="insurance.html?category=motor">ศูนย์ข้อมูลประกัน</a>
+        <a href="agent-dashboard.html">หลังบ้านตัวแทน</a>
+        <a class="button button--small button--dark" href="index.html#quote">ติดต่อทีม</a>
+      </nav>
+    </div>
+  </header>
+
+  <main id="main-content">
+    <section class="customer-hero" aria-labelledby="customer-title">
+      <div class="container customer-hero__grid">
+        <div>
+          <p class="eyebrow"><span></span> Customer Self-Service</p>
+          <h1 id="customer-title">เช็กสถานะกรมธรรม์และงานต่ออายุ</h1>
+          <p>กรอกเบอร์โทรและเลขอ้างอิงที่ทีมส่งให้ เพื่อดูวันหมดอายุ สถานะงาน และข้อมูลที่ควรเตรียม</p>
+        </div>
+        <form class="customer-lookup-form" id="customer-lookup-form">
+          <div class="form-row">
+            <label for="lookup-phone">เบอร์โทรศัพท์</label>
+            <input id="lookup-phone" name="phone" type="tel" inputmode="tel" autocomplete="tel" placeholder="081-111-2222" required>
+          </div>
+          <div class="form-row">
+            <label for="lookup-reference">เลขอ้างอิง / เลขกรมธรรม์</label>
+            <input id="lookup-reference" name="reference" type="text" placeholder="MT4-DEMO-001" required>
+          </div>
+          <button class="button button--primary button--submit" type="submit">ตรวจสอบสถานะ</button>
+          <p class="form-note" id="customer-lookup-feedback" role="status" aria-live="polite">สำหรับทดสอบ: ใช้เบอร์ 081-111-2222 และเลข MT4-DEMO-001 หลังเพิ่มข้อมูลตัวอย่างจากหลังบ้าน</p>
+        </form>
+      </div>
+    </section>
+
+    <section class="customer-results section" aria-labelledby="customer-results-title">
+      <div class="container">
+        <div class="section-heading agent-heading">
+          <div>
+            <p class="eyebrow eyebrow--dark"><span></span> Policy Status</p>
+            <h2 id="customer-results-title">ผลการตรวจสอบ</h2>
+          </div>
+          <p>ข้อมูลที่แสดงเป็นข้อมูลจำกัดสำหรับลูกค้า หากต้องการเอกสารฉบับเต็มหรือแก้ไขข้อมูล กรุณาติดต่อทีมผู้ดูแล</p>
+        </div>
+        <div class="customer-status-grid" id="customer-status-grid">
+          <div class="plan-empty">
+            <strong>ยังไม่มีข้อมูลที่แสดง</strong>
+            <span>กรอกเบอร์โทรและเลขอ้างอิงด้านบนเพื่อเริ่มตรวจสอบ</span>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer compact-footer">
+    <div class="container footer-bottom">
+      <p>© <span id="current-year"></span> Mittare Sattahip — Customer Status</p>
+      <p>ข้อมูลนี้เป็นสถานะเบื้องต้น เงื่อนไขจริงให้ยึดกรมธรรม์และการพิจารณาของบริษัท</p>
+    </div>
+  </footer>
+
+  <script src="script.js"></script>
+  <script src="customer-status.js"></script>
+</body>
+</html>
