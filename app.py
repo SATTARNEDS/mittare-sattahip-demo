@@ -33,6 +33,23 @@ ALLOWED_UPLOAD_EXTENSIONS = {"jpg", "jpeg", "png", "webp", "pdf", "doc", "docx",
 ALLOWED_PRODUCT_MEDIA_EXTENSIONS = {"jpg", "jpeg", "png", "webp", "pdf"}
 MAX_UPLOAD_BYTES = 8 * 1024 * 1024
 
+DEFAULT_PRODUCT_MEDIA = {
+    "motor-1": {"folder": "รถยนต์ประเภท1", "images": 6, "cover": "assets/insurance-motor.png"},
+    "motor-3": {"folder": "รถยนต์ประเภท3", "images": 7, "cover": "assets/insurance-motor.png"},
+    "motor-2plus": {"folder": "รถยนต์ประเภท2+", "image_names": ["0.jpg", "1.jpg", "2.jpg", "3.jpg", "4.jpg"], "cover": "assets/insurance-motor.png"},
+    "motor-3plus": {"folder": "รถยนต์ประเภท3+", "pdf": "ป3+  ใหม่.pdf", "images": 5, "cover": "assets/insurance-motor.png"},
+    "motor-one": {"folder": "มิตรแท้หนึ่งเดียว", "images": 10, "cover": "assets/insurance-motor.png"},
+    "motor-permpoon": {"folder": "มิตรแท้เพิ่มพูน2+", "pdf": "เพิ่มพูน 2+.pdf", "images": 6, "cover": "assets/insurance-motor.png"},
+    "motor-taweekoon": {"folder": "มิตรแท้ทวีคูณ", "images": 5, "cover": "assets/insurance-motor.png"},
+    "motor-permpoon3": {"folder": "มิตรแท้เพิ่มพูน3+", "images": 5, "cover": "assets/insurance-motor.png"},
+    "residential-fire": {"folder": "อัคคีภัย", "images": 2, "cover": "assets/insurance-property.png"},
+    "pa1": {"folder": "อุบัติเหตุส่วนบุคคล อบ.1", "images": 2, "cover": "assets/insurance-personal.png"},
+    "income-hospital": {"folder": "ชดเชยรายได้กรณีเข้ารักษาจากอุบัติเหตุ", "images": 4, "cover": "assets/insurance-personal.png"},
+    "golf": {"folder": "ประกันภัยสำหรับผู้เล่นกอล์ฟ", "images": 4, "cover": "assets/insurance-personal.png"},
+    "drone": {"folder": "ประกันภัยอากาศยานซึ่งไม่มีนักบิน", "images": 3, "cover": "assets/insurance-specialty.png"},
+    "fuel-station": {"folder": "ประกันภัยสถานีบริการเชื้อเพลิง", "images": 3, "cover": "assets/insurance-specialty.png"},
+}
+
 
 def create_app() -> Flask:
     app = Flask(__name__, static_folder=None)
@@ -324,9 +341,9 @@ def create_app() -> Flask:
                     """
                     INSERT INTO product_media (
                       plan_id, media_kind, stored_filename, original_filename,
-                      mime_type, size_bytes, sort_order, created_at
+                      mime_type, size_bytes, sort_order, public_url, source, created_at
                     )
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     """,
                     (
                         safe_plan_id,
@@ -336,6 +353,8 @@ def create_app() -> Flask:
                         file.mimetype,
                         saved_path.stat().st_size,
                         sort_order,
+                        "",
+                        "upload",
                         utc_now(),
                     ),
                 )
@@ -487,6 +506,8 @@ def initialize_database() -> None:
               mime_type TEXT DEFAULT '',
               size_bytes INTEGER DEFAULT 0,
               sort_order INTEGER DEFAULT 0,
+              public_url TEXT DEFAULT '',
+              source TEXT NOT NULL DEFAULT 'upload',
               created_at TEXT NOT NULL
             );
 
@@ -509,7 +530,10 @@ def initialize_database() -> None:
             """
         )
         ensure_column(db, "policies", "line_user_id", "TEXT DEFAULT ''")
+        ensure_column(db, "product_media", "public_url", "TEXT DEFAULT ''")
+        ensure_column(db, "product_media", "source", "TEXT NOT NULL DEFAULT 'upload'")
     migrate_product_media_json_to_database()
+    seed_default_product_media()
 
 
 def ensure_column(db: sqlite3.Connection, table_name: str, column_name: str, column_definition: str) -> None:
@@ -650,6 +674,7 @@ def admin_product_media_payload() -> dict[str, Any]:
             SELECT * FROM product_media
             ORDER BY plan_id ASC,
               CASE media_kind WHEN 'cover' THEN 0 WHEN 'image' THEN 1 ELSE 2 END,
+              CASE source WHEN 'default' THEN 0 ELSE 1 END,
               sort_order ASC,
               created_at ASC
             """
@@ -689,7 +714,8 @@ def product_media_row_payload(row: sqlite3.Row) -> dict[str, Any]:
         "size": row["size_bytes"],
         "type": row["mime_type"],
         "createdAt": row["created_at"],
-        "url": product_media_url(row["stored_filename"]),
+        "source": row["source"],
+        "url": row["public_url"] or product_media_url(row["stored_filename"]),
     }
 
 
@@ -726,9 +752,9 @@ def insert_legacy_product_media_row(
         """
         INSERT OR IGNORE INTO product_media (
           plan_id, media_kind, stored_filename, original_filename,
-          mime_type, size_bytes, sort_order, created_at
+          mime_type, size_bytes, sort_order, public_url, source, created_at
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """,
         (
             plan_id,
@@ -738,9 +764,113 @@ def insert_legacy_product_media_row(
             file_info.get("type", ""),
             int(file_info.get("size") or 0),
             sort_order,
+            file_info.get("url", ""),
+            "upload",
             file_info.get("createdAt") or utc_now(),
         ),
     )
+
+
+def seed_default_product_media() -> None:
+    with get_db() as db:
+        existing_default_count = db.execute(
+            "SELECT COUNT(*) AS total FROM product_media WHERE source = 'default'"
+        ).fetchone()["total"]
+        if existing_default_count:
+            return
+        for plan_id, media in DEFAULT_PRODUCT_MEDIA.items():
+            cover_url = media.get("cover", "")
+            if cover_url:
+                insert_default_product_media_row(
+                    db,
+                    plan_id,
+                    "cover",
+                    f"default:{plan_id}:cover",
+                    Path(cover_url).name,
+                    cover_url,
+                    0,
+                )
+
+            folder = media.get("folder", "")
+            image_names = media.get("image_names") or [
+                f"{index + 1}.jpg" for index in range(int(media.get("images", 0)))
+            ]
+            for index, image_name in enumerate(image_names, start=1):
+                public_url = encode_public_document_path(folder, image_name)
+                insert_default_product_media_row(
+                    db,
+                    plan_id,
+                    "image",
+                    f"default:{plan_id}:image:{index}:{image_name}",
+                    image_name,
+                    public_url,
+                    index,
+                )
+
+            pdf_name = media.get("pdf")
+            if pdf_name:
+                insert_default_product_media_row(
+                    db,
+                    plan_id,
+                    "pdf",
+                    f"default:{plan_id}:pdf:{pdf_name}",
+                    pdf_name,
+                    encode_public_document_path(folder, pdf_name),
+                    0,
+                )
+
+
+def insert_default_product_media_row(
+    db: sqlite3.Connection,
+    plan_id: str,
+    media_kind: str,
+    stored_filename: str,
+    original_filename: str,
+    public_url: str,
+    sort_order: int,
+) -> None:
+    if not public_url:
+        return
+    db.execute(
+        """
+        INSERT OR IGNORE INTO product_media (
+          plan_id, media_kind, stored_filename, original_filename,
+          mime_type, size_bytes, sort_order, public_url, source, created_at
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+        (
+            plan_id,
+            media_kind,
+            stored_filename,
+            original_filename,
+            guess_mime_type(original_filename),
+            0,
+            sort_order,
+            public_url,
+            "default",
+            utc_now(),
+        ),
+    )
+
+
+def encode_public_document_path(folder: str, file_name: str) -> str:
+    if not folder or not file_name:
+        return ""
+    from urllib.parse import quote
+
+    return "/".join(["document", quote(folder), quote(file_name)])
+
+
+def guess_mime_type(file_name: str) -> str:
+    extension = get_extension(file_name)
+    if extension == "pdf":
+        return "application/pdf"
+    if extension == "png":
+        return "image/png"
+    if extension == "webp":
+        return "image/webp"
+    return "image/jpeg"
 
 
 def delete_product_media_file(stored_filename: str | None) -> None:

@@ -71,6 +71,50 @@ const salesStatusLabels = {
   lost: "ปิดงานไม่สำเร็จ"
 };
 
+const policyProductOptionsByCategory = {
+  "รถยนต์": [
+    "รถยนต์ประเภท 1",
+    "รถยนต์ประเภท 2",
+    "รถยนต์ประเภท 3",
+    "รถยนต์ประเภท 2+",
+    "รถยนต์ประเภท 3+",
+    "มิตรแท้หนึ่งเดียว",
+    "ป.1 Extra",
+    "แผนรถเก๋ง Eco Car",
+    "มิตรแท้เพิ่มพูน 2+",
+    "มิตรแท้ทวีคูณ",
+    "มิตรแท้เพิ่มพูน 3+"
+  ],
+  "พ.ร.บ.": [
+    "ประกันภัยรถยนต์ภาคบังคับ",
+    "พ.ร.บ. รถบรรทุก LPG / NGV / น้ำมัน"
+  ],
+  "บ้านและทรัพย์สิน": [
+    "อัคคีภัยที่อยู่อาศัย",
+    "ประกันภัยบ้านมิตรแท้",
+    "ประกันภัยความเสี่ยงภัยทรัพย์สิน",
+    "ประกันภัยงานก่อสร้าง"
+  ],
+  "อุบัติเหตุ/สุขภาพ": [
+    "อุบัติเหตุส่วนบุคคล อบ.1",
+    "อุบัติเหตุส่วนบุคคล อบ.2",
+    "ชดเชยรายได้กรณีเข้ารักษา",
+    "ประกันภัยสำหรับผู้เล่นกอล์ฟ"
+  ],
+  "ธุรกิจ": [
+    "ประกันภัยธุรกิจ SME",
+    "ประกันภัยความรับผิดต่อบุคคลภายนอก",
+    "ประกันภัยความรับผิดผู้ขนส่ง",
+    "ขนส่งภายในประเทศแบบระบุภัย",
+    "ขนส่งภายในประเทศแบบ All Risks",
+    "ประกันภัยร้านทอง"
+  ],
+  "เฉพาะทาง": [
+    "ประกันภัยโดรน",
+    "ประกันภัยสถานีบริการเชื้อเพลิง"
+  ]
+};
+
 const productMediaCategoryImages = {
   motor: "assets/insurance-motor.png",
   property: "assets/insurance-property.png",
@@ -314,6 +358,21 @@ function getSelectedPolicy() {
   return policies.find((item) => String(item.id) === String(selectedPolicyId));
 }
 
+function renderPolicyProductOptions(selectedValue = "") {
+  const category = document.querySelector("#insurance-category")?.value || "รถยนต์";
+  const productSelect = document.querySelector("#product-name");
+  if (!productSelect) return;
+  const options = policyProductOptionsByCategory[category] || [];
+  const values = selectedValue && !options.includes(selectedValue)
+    ? [selectedValue, ...options]
+    : options;
+  productSelect.innerHTML = [
+    `<option value="">เลือกแผน / ผลิตภัณฑ์</option>`,
+    ...values.map((value) => `<option value="${escapeHtml(value)}">${escapeHtml(value)}</option>`)
+  ].join("");
+  productSelect.value = selectedValue || "";
+}
+
 function renderCurrentAttachments(policy) {
   const attachments = policy?.attachments || [];
   currentAttachments.hidden = !attachments.length;
@@ -394,7 +453,7 @@ function renderProductMediaList() {
           <div>
             <b>${escapeHtml(file.label)}</b>
             <a href="${escapeHtml(file.url)}" target="_blank" rel="noopener">${escapeHtml(file.originalName || file.filename)}</a>
-            <small>${Math.round((file.size || 0) / 1024)} KB</small>
+            <small>${file.source === "default" ? "ข้อมูลตั้งต้นใน Database" : `${Math.round((file.size || 0) / 1024)} KB · อัปโหลดเอง`}</small>
           </div>
           <button type="button" data-edit-product-media="${escapeHtml(file.filename)}">แก้ไข</button>
           <button type="button" data-remove-product-media="${escapeHtml(file.filename)}">ลบ</button>
@@ -413,6 +472,7 @@ function resetForm() {
   policyForm.reset();
   document.querySelector("#policy-id").value = "";
   document.querySelector("#line-user-id").value = "";
+  renderPolicyProductOptions();
   document.querySelector("#form-title").textContent = "เพิ่มข้อมูลกรมธรรม์";
   document.querySelector("#form-mode-number").textContent = "01";
   currentAttachments.hidden = true;
@@ -431,7 +491,7 @@ function editPolicy(policyId) {
   document.querySelector("#line-user-id").value = policy.lineUserId || "";
   document.querySelector("#assigned-agent").value = policy.assignedAgent || "";
   document.querySelector("#insurance-category").value = policy.insuranceCategory || "รถยนต์";
-  document.querySelector("#product-name").value = policy.productName || "";
+  renderPolicyProductOptions(policy.productName || "");
   document.querySelector("#policy-number").value = policy.policyNumber || "";
   document.querySelector("#insurer-name").value = policy.insurerName || "";
   document.querySelector("#start-date").value = policy.startDate || "";
@@ -642,6 +702,7 @@ logoutButton?.addEventListener("click", async () => {
 
 policyForm?.addEventListener("submit", handleFormSubmit);
 policyForm?.addEventListener("reset", () => window.setTimeout(resetForm, 0));
+document.querySelector("#insurance-category")?.addEventListener("change", () => renderPolicyProductOptions());
 policySearch?.addEventListener("input", renderPolicyTable);
 statusFilter?.addEventListener("change", renderPolicyTable);
 messageTone?.addEventListener("change", renderMessage);
@@ -704,4 +765,5 @@ document.querySelector("#export-data")?.addEventListener("click", exportData);
 document.querySelector("#clear-all-data")?.addEventListener("click", clearAllData);
 
 initializeProductMediaPlanOptions();
+renderPolicyProductOptions();
 initializeAgentDashboard();
