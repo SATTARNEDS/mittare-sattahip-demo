@@ -32,6 +32,7 @@ let productMedia = {};
 let lineContacts = [];
 let linePushConfigured = false;
 let lineWebhookConfigured = false;
+const lineTestUserId = "Ud9cbb7b4b3f915283bedfdd7623593fe";
 
 function setAgentLoading(isLoading, message = "กำลังเตรียมข้อมูลหลังบ้าน") {
   if (!agentLoading) return;
@@ -643,9 +644,13 @@ async function removeAttachment(attachmentId) {
 }
 
 async function addSampleData() {
-  await apiFetch("/api/demo/seed", { method: "POST", body: JSON.stringify({}) });
+  await apiFetch("/api/demo/seed", {
+    method: "POST",
+    body: JSON.stringify({ lineUserId: lineTestUserId })
+  });
   await refreshPolicies();
-  formFeedback.textContent = "เพิ่มข้อมูลตัวอย่างลง SQLite แล้ว ลองใช้ MT4-DEMO-001 กับเบอร์ 081-111-2222 ในหน้าลูกค้า";
+  await refreshLineContacts();
+  formFeedback.textContent = "เพิ่มข้อมูลทดสอบ LINE ลง SQLite แล้ว ค้นหา MT4-LINE-TEST หรือ bom05183 เพื่อทดลองส่ง Push";
 }
 
 async function exportData() {

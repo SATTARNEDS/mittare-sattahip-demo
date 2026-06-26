@@ -441,8 +441,12 @@ def create_app() -> Flask:
     @app.post("/api/demo/seed")
     @require_admin
     def seed_demo_data():
+        data = request.get_json(silent=True) or {}
+        line_user_id = str(data.get("lineUserId", "")).strip()
         with get_db() as db:
             seed_demo_rows(db)
+            if line_user_id:
+                seed_line_test_rows(db, line_user_id)
             rows = db.execute("SELECT * FROM policies ORDER BY end_date ASC").fetchall()
             return jsonify([policy_to_dict(db, row, include_private=True) for row in rows])
 
@@ -1154,6 +1158,165 @@ def seed_demo_rows(db: sqlite3.Connection) -> None:
                 now,
             ),
         )
+
+
+def seed_line_test_rows(db: sqlite3.Connection, line_user_id: str) -> None:
+    now = utc_now()
+    rows = [
+        {
+            "public_ref": "MT4-LINE-TEST-001",
+            "customer_name": "ทดสอบ ใกล้ต่ออายุ",
+            "customer_phone": "081-000-1001",
+            "line_name": "bom05183",
+            "assigned_agent": "ทีม Mittare Sattahip",
+            "insurance_category": "รถยนต์",
+            "product_name": "รถยนต์ประเภท 1",
+            "policy_number": "MT4-LINE-TEST-001",
+            "insurer_name": "มิตรแท้ประกันภัย",
+            "start_date": "2025-07-05",
+            "end_date": "2026-07-05",
+            "premium_amount": 15400,
+            "sales_status": "quoted",
+            "next_follow_up": "2026-06-27",
+            "customer_notes": "เคสทดสอบต่ออายุใกล้ครบกำหนด ใช้ทดสอบข้อความ Renewal",
+        },
+        {
+            "public_ref": "MT4-LINE-TEST-002",
+            "customer_name": "ทดสอบ หมดอายุแล้ว",
+            "customer_phone": "081-000-1002",
+            "line_name": "bom05183",
+            "assigned_agent": "ทีม Mittare Sattahip",
+            "insurance_category": "พ.ร.บ.",
+            "product_name": "ประกันภัยรถยนต์ภาคบังคับ",
+            "policy_number": "MT4-LINE-TEST-002",
+            "insurer_name": "มิตรแท้ประกันภัย",
+            "start_date": "2025-06-20",
+            "end_date": "2026-06-20",
+            "premium_amount": 645.21,
+            "sales_status": "waiting",
+            "next_follow_up": "2026-06-26",
+            "customer_notes": "เคสทดสอบหมดอายุแล้ว เหมาะกับข้อความติดตามด่วน",
+        },
+        {
+            "public_ref": "MT4-LINE-TEST-003",
+            "customer_name": "ทดสอบ รอเอกสาร",
+            "customer_phone": "081-000-1003",
+            "line_name": "bom05183",
+            "assigned_agent": "พรรณี",
+            "insurance_category": "บ้านและทรัพย์สิน",
+            "product_name": "อัคคีภัยที่อยู่อาศัย",
+            "policy_number": "MT4-LINE-TEST-003",
+            "insurer_name": "มิตรแท้ประกันภัย",
+            "start_date": "2026-07-01",
+            "end_date": "2027-07-01",
+            "premium_amount": 3200,
+            "sales_status": "documents",
+            "next_follow_up": "2026-06-28",
+            "customer_notes": "รอสำเนาทะเบียนบ้าน รูปหน้าบ้าน และรายละเอียดทรัพย์สิน",
+        },
+        {
+            "public_ref": "MT4-LINE-TEST-004",
+            "customer_name": "ทดสอบ นัดชำระ",
+            "customer_phone": "081-000-1004",
+            "line_name": "bom05183",
+            "assigned_agent": "เทพา",
+            "insurance_category": "ธุรกิจ",
+            "product_name": "ประกันภัยธุรกิจ SME",
+            "policy_number": "MT4-LINE-TEST-004",
+            "insurer_name": "มิตรแท้ประกันภัย",
+            "start_date": "2026-07-10",
+            "end_date": "2027-07-10",
+            "premium_amount": 9800,
+            "sales_status": "payment",
+            "next_follow_up": "2026-06-29",
+            "customer_notes": "ลูกค้าตกลงแผนแล้ว รอแจ้งช่องทางชำระเบี้ย",
+        },
+        {
+            "public_ref": "MT4-LINE-TEST-005",
+            "customer_name": "ทดสอบ ติดตามเคลม",
+            "customer_phone": "081-000-1005",
+            "line_name": "bom05183",
+            "assigned_agent": "ทีมเคลม มิตรแท้สัตหีบ",
+            "insurance_category": "รถยนต์",
+            "product_name": "รถยนต์ประเภท 2+",
+            "policy_number": "MT4-LINE-TEST-005",
+            "insurer_name": "มิตรแท้ประกันภัย",
+            "start_date": "2026-02-01",
+            "end_date": "2027-02-01",
+            "premium_amount": 8900,
+            "sales_status": "claim-followup",
+            "next_follow_up": "2026-06-26",
+            "customer_notes": "เคสทดสอบติดตามเอกสารเคลมและสถานะหลังเกิดเหตุ",
+        },
+        {
+            "public_ref": "MT4-LINE-TEST-006",
+            "customer_name": "ทดสอบ ลูกค้าใหม่",
+            "customer_phone": "081-000-1006",
+            "line_name": "bom05183",
+            "assigned_agent": "ทีม Mittare Sattahip",
+            "insurance_category": "อุบัติเหตุ/สุขภาพ",
+            "product_name": "ชดเชยรายได้กรณีเข้ารักษา",
+            "policy_number": "MT4-LINE-TEST-006",
+            "insurer_name": "มิตรแท้ประกันภัย",
+            "start_date": "2026-07-15",
+            "end_date": "2027-07-15",
+            "premium_amount": 2500,
+            "sales_status": "new",
+            "next_follow_up": "2026-06-30",
+            "customer_notes": "เคสทดสอบลูกค้าใหม่สำหรับลองสร้างข้อความแนะนำแผน",
+        },
+    ]
+    for row in rows:
+        existing = db.execute(
+            "SELECT id FROM policies WHERE policy_number = ?",
+            (row["policy_number"],),
+        ).fetchone()
+        if existing:
+            db.execute(
+                """
+                UPDATE policies
+                SET public_ref = ?, customer_name = ?, customer_phone = ?, line_name = ?, line_user_id = ?,
+                    assigned_agent = ?, insurance_category = ?, product_name = ?, insurer_name = ?,
+                    start_date = ?, end_date = ?, premium_amount = ?, sales_status = ?, next_follow_up = ?,
+                    customer_notes = ?, updated_at = ?
+                WHERE policy_number = ?
+                """,
+                (
+                    row["public_ref"], row["customer_name"], row["customer_phone"], row["line_name"], line_user_id,
+                    row["assigned_agent"], row["insurance_category"], row["product_name"], row["insurer_name"],
+                    row["start_date"], row["end_date"], row["premium_amount"], row["sales_status"], row["next_follow_up"],
+                    row["customer_notes"], now, row["policy_number"],
+                ),
+            )
+            continue
+        db.execute(
+            """
+            INSERT INTO policies (
+              public_ref, customer_name, customer_phone, line_name, line_user_id, assigned_agent,
+              insurance_category, product_name, policy_number, insurer_name, start_date, end_date,
+              premium_amount, sales_status, next_follow_up, customer_notes, created_at, updated_at
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                row["public_ref"], row["customer_name"], row["customer_phone"], row["line_name"], line_user_id,
+                row["assigned_agent"], row["insurance_category"], row["product_name"], row["policy_number"], row["insurer_name"],
+                row["start_date"], row["end_date"], row["premium_amount"], row["sales_status"], row["next_follow_up"],
+                row["customer_notes"], now, now,
+            ),
+        )
+    db.execute(
+        """
+        INSERT INTO line_contacts (line_user_id, display_name, latest_message, latest_event_type, first_seen_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?)
+        ON CONFLICT(line_user_id) DO UPDATE SET
+          display_name = excluded.display_name,
+          latest_message = excluded.latest_message,
+          latest_event_type = excluded.latest_event_type,
+          updated_at = excluded.updated_at
+        """,
+        (line_user_id, "bom05183", "เพิ่มข้อมูลทดสอบสำหรับ LINE Push แล้ว", "manual-test", now, now),
+    )
 
 
 app = create_app()
