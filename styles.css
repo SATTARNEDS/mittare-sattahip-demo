@@ -377,6 +377,12 @@ svg { width: 1.35em; fill: none; stroke: currentColor; stroke-width: 1.8; stroke
 .agent-list-section {
   background: var(--cream);
 }
+.agent-dashboard {
+  padding-bottom: 34px;
+}
+.agent-list-section {
+  padding-top: 28px;
+}
 .agent-heading h2 {
   font-size: clamp(2.2rem, 4.5vw, 4rem);
 }

@@ -137,6 +137,62 @@
       </div>
     </section>
 
+    <section class="agent-list-section section" id="policy-list" aria-labelledby="policy-list-title">
+      <div class="container">
+        <div class="section-heading agent-heading">
+          <div>
+            <p class="eyebrow eyebrow--dark"><span></span> Policy Pipeline</p>
+            <h2 id="policy-list-title">รายการกรมธรรม์และสถานะงานขาย</h2>
+          </div>
+          <p>กรองงานตามสถานะ ค้นหาลูกค้า และเลือกหนึ่งรายการเพื่อสร้างข้อความติดตามหรือแก้ไขข้อมูล</p>
+        </div>
+
+        <div class="agent-toolbar">
+          <div class="insurance-search">
+            <svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>
+            <label class="sr-only" for="policy-search">ค้นหาลูกค้า</label>
+            <input id="policy-search" type="search" placeholder="ค้นหาชื่อ เบอร์ เลขกรมธรรม์ หรือแผน">
+          </div>
+          <div class="form-row agent-filter">
+            <label class="sr-only" for="status-filter">กรองสถานะ</label>
+            <select id="status-filter">
+              <option value="all">ทุกสถานะ</option>
+              <option value="new">ลูกค้าใหม่</option>
+              <option value="quoted">ส่งใบเสนอราคาแล้ว</option>
+              <option value="waiting">รอตัดสินใจ</option>
+              <option value="documents">รอเอกสาร</option>
+              <option value="payment">นัดชำระ</option>
+              <option value="renewed">ต่ออายุแล้ว</option>
+              <option value="claim-followup">ติดตามหลังเคลม</option>
+              <option value="lost">ปิดงานไม่สำเร็จ</option>
+            </select>
+          </div>
+          <button class="button button--dark" id="add-sample-data" type="button">เพิ่มข้อมูลตัวอย่าง</button>
+        </div>
+
+        <div class="agent-table-wrap">
+          <table class="agent-table">
+            <caption>รายการกรมธรรม์ที่บันทึกไว้</caption>
+            <thead>
+              <tr>
+                <th scope="col">ลูกค้า</th>
+                <th scope="col">กรมธรรม์</th>
+                <th scope="col">หมดอายุ</th>
+                <th scope="col">สถานะ</th>
+                <th scope="col">ติดตาม</th>
+                <th scope="col">จัดการ</th>
+              </tr>
+            </thead>
+            <tbody id="policy-table-body"></tbody>
+          </table>
+          <div class="plan-empty" id="policy-empty" hidden>
+            <strong>ยังไม่มีข้อมูลกรมธรรม์</strong>
+            <span>เริ่มจากเพิ่มข้อมูลลูกค้าหรือเพิ่มข้อมูลตัวอย่างเพื่อทดลองระบบ</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
     <section class="agent-workspace section" id="policy-form" aria-labelledby="form-title">
       <div class="container agent-workspace__grid">
         <form class="agent-form" id="agent-policy-form">
@@ -342,62 +398,6 @@
           <p>เลือกแผนด้านซ้ายเพื่อดูไฟล์ที่ตั้งไว้ ลบไฟล์ได้ทันทีถ้าไม่ต้องการให้หน้าเว็บใช้ไฟล์นั้นแล้ว</p>
           <div class="agent-media-list" id="product-media-list" aria-live="polite"></div>
         </aside>
-        </div>
-      </div>
-    </section>
-
-    <section class="agent-list-section section" id="policy-list" aria-labelledby="policy-list-title">
-      <div class="container">
-        <div class="section-heading agent-heading">
-          <div>
-            <p class="eyebrow eyebrow--dark"><span></span> Policy Pipeline</p>
-            <h2 id="policy-list-title">รายการกรมธรรม์และสถานะงานขาย</h2>
-          </div>
-          <p>กรองงานตามสถานะ ค้นหาลูกค้า และเลือกหนึ่งรายการเพื่อสร้างข้อความติดตามหรือแก้ไขข้อมูล</p>
-        </div>
-
-        <div class="agent-toolbar">
-          <div class="insurance-search">
-            <svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>
-            <label class="sr-only" for="policy-search">ค้นหาลูกค้า</label>
-            <input id="policy-search" type="search" placeholder="ค้นหาชื่อ เบอร์ เลขกรมธรรม์ หรือแผน">
-          </div>
-          <div class="form-row agent-filter">
-            <label class="sr-only" for="status-filter">กรองสถานะ</label>
-            <select id="status-filter">
-              <option value="all">ทุกสถานะ</option>
-              <option value="new">ลูกค้าใหม่</option>
-              <option value="quoted">ส่งใบเสนอราคาแล้ว</option>
-              <option value="waiting">รอตัดสินใจ</option>
-              <option value="documents">รอเอกสาร</option>
-              <option value="payment">นัดชำระ</option>
-              <option value="renewed">ต่ออายุแล้ว</option>
-              <option value="claim-followup">ติดตามหลังเคลม</option>
-              <option value="lost">ปิดงานไม่สำเร็จ</option>
-            </select>
-          </div>
-          <button class="button button--dark" id="add-sample-data" type="button">เพิ่มข้อมูลตัวอย่าง</button>
-        </div>
-
-        <div class="agent-table-wrap">
-          <table class="agent-table">
-            <caption>รายการกรมธรรม์ที่บันทึกไว้</caption>
-            <thead>
-              <tr>
-                <th scope="col">ลูกค้า</th>
-                <th scope="col">กรมธรรม์</th>
-                <th scope="col">หมดอายุ</th>
-                <th scope="col">สถานะ</th>
-                <th scope="col">ติดตาม</th>
-                <th scope="col">จัดการ</th>
-              </tr>
-            </thead>
-            <tbody id="policy-table-body"></tbody>
-          </table>
-          <div class="plan-empty" id="policy-empty" hidden>
-            <strong>ยังไม่มีข้อมูลกรมธรรม์</strong>
-            <span>เริ่มจากเพิ่มข้อมูลลูกค้าหรือเพิ่มข้อมูลตัวอย่างเพื่อทดลองระบบ</span>
-          </div>
         </div>
       </div>
     </section>
