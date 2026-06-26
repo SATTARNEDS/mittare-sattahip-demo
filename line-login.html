@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="เข้าสู่ระบบด้วย LINE เพื่อให้ Mittare Sattahip ดึงข้อมูลโปรไฟล์และตรวจสอบกรมธรรม์ที่ผูกกับ LINE">
+  <meta name="theme-color" content="#075c55">
+  <title>Login ด้วย LINE | Mittare Sattahip</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body class="customer-page">
+  <a class="skip-link" href="#main-content">ข้ามไปยังเนื้อหาหลัก</a>
+  <div class="service-bar">
+    <div class="container service-bar__inner">
+      <p><span class="pulse" aria-hidden="true"></span> เข้าสู่ระบบด้วย LINE เพื่อเช็กสถานะเร็วขึ้น</p>
+      <a href="tel:1741">1741</a>
+    </div>
+  </div>
+
+  <header class="site-header">
+    <div class="container nav-wrap">
+      <a class="brand" href="index.html" aria-label="Mittare Sattahip หน้าแรก">
+        <span class="brand__mark" aria-hidden="true">
+          <svg viewBox="0 0 64 64"><path d="M32 54S8 42 8 22C8 12 14 7 22 7c5 0 8 2 10 6 2-4 5-6 10-6 8 0 14 5 14 15 0 20-24 32-24 32Z"/><path d="m21 31 7 7 15-16"/></svg>
+        </span>
+        <span><strong>Mittare</strong><small>SATTAHIP</small></span>
+      </a>
+      <button class="menu-toggle" type="button" aria-expanded="false" aria-controls="main-navigation">
+        <span class="sr-only">เปิดเมนู</span>
+        <span></span><span></span><span></span>
+      </button>
+      <nav class="main-nav" id="main-navigation" aria-label="เมนูหลัก">
+        <a href="index.html">หน้าแรก</a>
+        <a href="customer-status.html">เช็กสถานะ</a>
+        <a class="admin-nav-entry" href="agent-dashboard.html">หลังบ้านตัวแทน</a>
+        <a class="button button--small button--dark" href="index.html#quote">ติดต่อทีม</a>
+      </nav>
+    </div>
+  </header>
+
+  <main id="main-content">
+    <section class="customer-hero line-login-hero" aria-labelledby="line-login-title">
+      <div class="container customer-hero__grid">
+        <div>
+          <p class="eyebrow"><span></span> LINE Login</p>
+          <h1 id="line-login-title">เข้าสู่ระบบด้วย LINE เพื่อเช็กข้อมูลกรมธรรม์</h1>
+          <p>ระบบจะขอเฉพาะโปรไฟล์ LINE เช่น ชื่อ รูปภาพ และ User ID เพื่อจับคู่กับข้อมูลกรมธรรม์ที่ทีมบันทึกไว้</p>
+        </div>
+        <section class="line-login-card" aria-labelledby="line-profile-title">
+          <div class="line-login-card__status" id="line-login-status" role="status" aria-live="polite">
+            กำลังตรวจสอบสถานะ LINE Login...
+          </div>
+          <div class="line-profile" id="line-profile" hidden>
+            <img id="line-profile-picture" src="assets/logo.svg" alt="">
+            <div>
+              <span>เข้าสู่ระบบแล้ว</span>
+              <h2 id="line-profile-title">LINE Profile</h2>
+              <code id="line-profile-user-id"></code>
+            </div>
+          </div>
+          <div class="line-login-actions">
+            <a class="button button--line" id="line-login-button" href="/auth/line/start">Login ด้วย LINE</a>
+            <button class="button button--dark" id="line-logout-button" type="button" hidden>ออกจากระบบ LINE</button>
+          </div>
+          <p class="form-note">หลังลูกค้า Login แล้ว LINE User ID จะถูกบันทึกไว้ให้ทีมใช้ผูกกรมธรรม์และทดลอง Push ได้ง่ายขึ้น</p>
+        </section>
+      </div>
+    </section>
+
+    <section class="customer-results section" aria-labelledby="line-policy-title">
+      <div class="container">
+        <div class="section-heading agent-heading">
+          <div>
+            <p class="eyebrow eyebrow--dark"><span></span> My Policies</p>
+            <h2 id="line-policy-title">กรมธรรม์ที่พบจาก LINE User ID</h2>
+          </div>
+          <p>ข้อมูลจะแสดงเฉพาะรายการที่หลังบ้านบันทึก LINE User ID ตรงกับบัญชี LINE ที่ลูกค้า Login</p>
+        </div>
+        <div class="customer-status-grid" id="line-policy-grid">
+          <div class="plan-empty">
+            <strong>ยังไม่ได้เข้าสู่ระบบด้วย LINE</strong>
+            <span>กดปุ่ม Login ด้วย LINE ด้านบนเพื่อเริ่มตรวจสอบข้อมูล</span>
+          </div>
+        </div>
+        <div class="customer-status-grid is-loading" id="line-policy-loading" hidden aria-hidden="true">
+          <div class="customer-status-card status-skeleton">
+            <span></span><span></span><span></span>
+          </div>
+          <div class="customer-status-card status-skeleton">
+            <span></span><span></span><span></span>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer compact-footer">
+    <div class="container footer-bottom">
+      <p>© <span id="current-year"></span> Mittare Sattahip — LINE Login</p>
+      <p>ข้อมูลนี้เป็นสถานะเบื้องต้น เงื่อนไขจริงให้ยึดกรมธรรม์และการพิจารณาของบริษัท</p>
+    </div>
+  </footer>
+
+  <script src="script.js"></script>
+  <script src="line-login.js"></script>
+</body>
+</html>

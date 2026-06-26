@@ -1031,6 +1031,80 @@ svg { width: 1.35em; fill: none; stroke: currentColor; stroke-width: 1.8; stroke
   border-radius: 24px;
   box-shadow: 0 28px 80px rgba(0,0,0,.22);
 }
+.line-login-hero .customer-hero__grid {
+  min-height: 560px;
+}
+.line-login-card {
+  display: grid;
+  gap: 18px;
+  padding: clamp(22px, 4vw, 34px);
+  color: var(--ink);
+  background: var(--white);
+  border: 1px solid rgba(255,255,255,.4);
+  border-radius: 24px;
+  box-shadow: 0 28px 80px rgba(0,0,0,.22);
+}
+.line-login-card__status {
+  padding: 12px 14px;
+  color: var(--green-950);
+  background: var(--green-100);
+  border-radius: 14px;
+  font-size: .84rem;
+  font-weight: 800;
+}
+.line-profile {
+  display: grid;
+  grid-template-columns: 72px minmax(0, 1fr);
+  gap: 14px;
+  align-items: center;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+}
+.line-profile[hidden] {
+  display: none;
+}
+.line-profile img {
+  width: 72px;
+  height: 72px;
+  object-fit: cover;
+  background: var(--green-100);
+  border-radius: 50%;
+}
+.line-profile span {
+  color: var(--muted);
+  font-size: .76rem;
+  font-weight: 700;
+}
+.line-profile h2 {
+  margin: 2px 0 4px;
+  color: var(--green-950);
+  font-size: 1.35rem;
+}
+.line-profile code {
+  display: block;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  color: var(--muted);
+  font-size: .76rem;
+}
+.line-login-actions {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+}
+.button--line {
+  color: var(--white);
+  background: #06c755;
+  border-color: #06c755;
+}
+.button--line:hover {
+  background: #04b94d;
+}
+.button--line[aria-disabled="true"] {
+  pointer-events: none;
+  opacity: .55;
+}
 .customer-status-grid {
   display: grid;
   gap: 18px;
