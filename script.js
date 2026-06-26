@@ -143,6 +143,7 @@ let activeDocumentImages = [];
 let activeDocumentImageIndex = 0;
 let activeDocumentPdfUrl = "";
 let activeDocumentTitle = "";
+let dynamicProductMedia = {};
 
 const officialRateSources = {
   compulsory: {
@@ -286,6 +287,7 @@ let insuranceSearchTerm = "";
 
 initializeInsurancePage();
 renderInsurancePlans();
+loadDynamicProductMedia();
 
 document.querySelectorAll(".insurance-tab").forEach((button) => {
   button.addEventListener("click", () => {
@@ -844,15 +846,43 @@ function encodeDocumentPath(...segments) {
 
 function getInsuranceMedia(planId) {
   const config = insuranceMedia[planId];
-  if (!config) return null;
+  const dynamicMedia = dynamicProductMedia[planId] || {};
+  if (!config && !dynamicMedia.imageUrls?.length && !dynamicMedia.pdfUrl) return null;
 
-  const imageNames = config.imageNames
-    || Array.from({ length: config.images || 0 }, (_, index) => `${index + 1}.jpg`);
+  const imageNames = config?.imageNames
+    || Array.from({ length: config?.images || 0 }, (_, index) => `${index + 1}.jpg`);
+  const fallbackImageUrls = config
+    ? imageNames.map((fileName) => encodeDocumentPath(config.folder, fileName))
+    : [];
 
   return {
-    pdfUrl: config.pdf ? encodeDocumentPath(config.folder, config.pdf) : "",
-    imageUrls: imageNames.map((fileName) => encodeDocumentPath(config.folder, fileName))
+    pdfUrl: dynamicMedia.pdfUrl || (config?.pdf ? encodeDocumentPath(config.folder, config.pdf) : ""),
+    imageUrls: dynamicMedia.imageUrls?.length ? dynamicMedia.imageUrls : fallbackImageUrls,
+    coverImageUrl: dynamicMedia.coverImageUrl || ""
   };
+}
+
+function getPlanCoverImage(plan) {
+  return dynamicProductMedia[plan.id]?.coverImageUrl || categoryMeta[plan.category].image;
+}
+
+async function loadDynamicProductMedia() {
+  try {
+    const response = await fetch("/api/public/product-media", { credentials: "same-origin" });
+    if (!response.ok) return;
+    dynamicProductMedia = await response.json();
+    renderInsurancePlans();
+  } catch (error) {
+    dynamicProductMedia = {};
+  }
+}
+
+function escapeAttribute(value) {
+  return String(value || "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;");
 }
 
 function getOfficialProductUrl(product) {
@@ -876,7 +906,7 @@ function renderInsurancePlans() {
   planEmpty.hidden = visiblePlans.length > 0;
   planGrid.innerHTML = visiblePlans.map((plan) => `
     <article class="plan-card">
-      <img class="plan-card__image" src="${categoryMeta[plan.category].image}" alt="" loading="lazy">
+      <img class="plan-card__image" src="${escapeAttribute(getPlanCoverImage(plan))}" alt="" loading="lazy">
       <div class="plan-card__header">
         <span class="plan-card__icon">${plan.icon}</span>
         <span class="plan-card__category">${getCategoryLabel(plan.category)}</span>
@@ -925,6 +955,13 @@ function openProductDetail(productId) {
   document.querySelector("#product-dialog-icon").textContent = product.icon;
   document.querySelector("#product-dialog-title").textContent = product.title;
   document.querySelector("#product-dialog-lead").textContent = product.lead;
+  const coverImage = document.querySelector("#product-dialog-image");
+  const coverImageUrl = dynamicProductMedia[product.id]?.coverImageUrl || "";
+  if (coverImage) {
+    coverImage.hidden = !coverImageUrl;
+    coverImage.src = coverImageUrl;
+    coverImage.alt = coverImageUrl ? product.title : "";
+  }
   renderList("#product-dialog-audience", product.audience);
   renderList("#product-dialog-coverage", product.coverage);
   renderList("#product-dialog-premium", product.premium);

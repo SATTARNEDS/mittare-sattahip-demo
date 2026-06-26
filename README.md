@@ -11,6 +11,8 @@
 - `app.py` Flask backend + SQLite API
 - `instance/mittare.sqlite3` ฐานข้อมูลจริง สร้างอัตโนมัติเมื่อรันระบบ
 - `instance/uploads/` ที่เก็บไฟล์แนบจริง สร้างอัตโนมัติเมื่ออัปโหลดไฟล์
+- `instance/product-media/` ที่เก็บรูปประกอบหน้าเว็บ รูปเอกสาร และ PDF สินค้า
+- `render.yaml` ไฟล์ตั้งค่า Deploy บน Render พร้อม persistent disk
 
 ## เปิดใช้งานแบบระบบจริง
 
@@ -44,6 +46,7 @@ python app.py
 
 - เพิ่ม/แก้ไข/ลบข้อมูลลูกค้าและกรมธรรม์ลง SQLite
 - อัปโหลดรูปภาพและไฟล์เอกสารลง `instance/uploads/`
+- เพิ่ม/ลบรูปประกอบหน้าเว็บ รูปเอกสาร และ PDF สินค้า โดย metadata บันทึกลง SQLite และไฟล์เก็บใน `instance/product-media/`
 - แบ่งสถานะงานขาย เช่น ลูกค้าใหม่ ส่งใบเสนอราคา รอเอกสาร นัดชำระ ต่ออายุแล้ว
 - ดูแจ้งเตือนภายในสำหรับกรมธรรม์หมดอายุ ครบกำหนดใน 7/30 วัน และนัดติดตาม
 - สร้างข้อความติดตามต่ออายุ ขอเอกสาร นัดชำระ หรือติดตามเคลม แล้วคัดลอกหรือเปิด LINE Share เพื่อกดส่งเอง
@@ -65,11 +68,33 @@ python app.py
 
 หน้าลูกค้าจะแสดงเฉพาะข้อมูลจำกัด เช่น สถานะ วันหมดอายุ เบี้ย และผู้ดูแล โดยไม่เปิดไฟล์แนบหรือบันทึกภายในทั้งหมด
 
+## เปิดเว็บให้ลูกค้าทดสอบผ่าน Render
+
+GitHub Pages ใช้ได้เฉพาะเว็บ static จึงไม่เหมาะกับระบบนี้เพราะหลังบ้านต้องเขียน SQLite และรับอัปโหลดไฟล์ ให้ใช้ Render/Railway/Fly.io หรือ VPS ที่รัน Flask ได้ ตัวเลือกที่เตรียมไว้ใน repo นี้คือ Render
+
+1. Push repo นี้ขึ้น GitHub
+2. เข้า Render Dashboard แล้วเลือก New > Blueprint หรือ New > Web Service
+3. เลือก repo `SATTARNEDS/mittare-sattahip-demo`
+4. ใช้ค่าจาก `render.yaml` หรือกรอกเอง:
+
+```text
+Build Command: pip install -r requirements.txt
+Start Command: gunicorn app:app
+APP_INSTANCE_DIR: /var/data
+```
+
+5. ตั้ง `ADMIN_PASSWORD` เป็นรหัสผ่านหลังบ้าน และให้ Render สร้าง `SECRET_KEY`
+6. เปิด persistent disk ที่ mount path `/var/data` ขนาดเริ่มต้น 1 GB
+7. หลัง deploy เสร็จ Render จะให้ URL รูปแบบ `https://ชื่อเว็บ.onrender.com`
+8. ถ้าต้องการโดเมน `.org` ให้ซื้อโดเมนจากผู้ให้บริการโดเมน แล้วเพิ่ม Custom Domain ใน Render และตั้งค่า DNS ตามที่ Render แจ้ง
+
+สำหรับทดสอบลูกค้าทันที ส่งลิงก์หน้าเว็บหลักหรือ `customer-status.html` จาก URL ของ Render ได้เลย ส่วนหลังบ้านคือ `https://ชื่อเว็บ.onrender.com/agent-dashboard.html`
+
 ## หมายเหตุสำหรับ Production
 
 - เปลี่ยน `ADMIN_PASSWORD` และ `SECRET_KEY` ทุกครั้งก่อนเผยแพร่จริง
 - รันผ่าน HTTPS เพื่อปกป้อง session และข้อมูลลูกค้า
-- สำรองทั้ง `instance/mittare.sqlite3` และ `instance/uploads/`
+- สำรองทั้ง `instance/mittare.sqlite3`, `instance/uploads/` และ `instance/product-media/`
 - ตั้งสิทธิ์โฟลเดอร์ `instance/` ไม่ให้เปิดดาวน์โหลดตรงจากเว็บเซิร์ฟเวอร์
 - SQLite เหมาะกับทีมเล็กหรือใช้งานเครื่องเดียว/เซิร์ฟเวอร์เดียว หากมีหลายสาขาหรือผู้ใช้พร้อมกันจำนวนมากควรย้ายไป PostgreSQL
 - ไฟล์แนบจำกัดที่ 8 MB ต่อ request และรองรับ `jpg`, `jpeg`, `png`, `webp`, `pdf`, `doc`, `docx`, `xls`, `xlsx`

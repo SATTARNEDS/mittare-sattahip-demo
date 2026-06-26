@@ -22,10 +22,13 @@ from werkzeug.utils import secure_filename
 
 
 BASE_DIR = Path(__file__).resolve().parent
-INSTANCE_DIR = BASE_DIR / "instance"
+INSTANCE_DIR = Path(os.environ.get("APP_INSTANCE_DIR", BASE_DIR / "instance"))
 UPLOAD_DIR = INSTANCE_DIR / "uploads"
+PRODUCT_MEDIA_DIR = INSTANCE_DIR / "product-media"
+PRODUCT_MEDIA_CONFIG_PATH = INSTANCE_DIR / "product_media.json"
 DATABASE_PATH = INSTANCE_DIR / "mittare.sqlite3"
 ALLOWED_UPLOAD_EXTENSIONS = {"jpg", "jpeg", "png", "webp", "pdf", "doc", "docx", "xls", "xlsx"}
+ALLOWED_PRODUCT_MEDIA_EXTENSIONS = {"jpg", "jpeg", "png", "webp", "pdf"}
 MAX_UPLOAD_BYTES = 8 * 1024 * 1024
 
 
@@ -37,6 +40,7 @@ def create_app() -> Flask:
 
     INSTANCE_DIR.mkdir(exist_ok=True)
     UPLOAD_DIR.mkdir(exist_ok=True)
+    PRODUCT_MEDIA_DIR.mkdir(exist_ok=True)
     initialize_database()
 
     @app.errorhandler(HTTPException)
@@ -63,6 +67,13 @@ def create_app() -> Flask:
         if filename in allowed_files or filename.startswith(allowed_roots):
             return send_from_directory(BASE_DIR, filename)
         abort(404)
+
+    @app.get("/product-media/<path:filename>")
+    def product_media_file(filename: str):
+        safe_path = safe_join(str(PRODUCT_MEDIA_DIR), filename)
+        if not safe_path:
+            abort(404)
+        return send_from_directory(PRODUCT_MEDIA_DIR, filename)
 
     @app.get("/api/session")
     def get_session():
@@ -202,6 +213,102 @@ def create_app() -> Flask:
         delete_upload_file(attachment["stored_filename"])
         return jsonify({"ok": True})
 
+    @app.get("/api/public/product-media")
+    def public_product_media():
+        return jsonify(public_product_media_payload())
+
+    @app.get("/api/product-media")
+    @require_admin
+    def list_product_media():
+        return jsonify(admin_product_media_payload())
+
+    @app.post("/api/product-media/<plan_id>")
+    @require_admin
+    def upload_product_media(plan_id: str):
+        safe_plan_id = normalize_plan_id(plan_id)
+        if not safe_plan_id:
+            raise BadRequest("รหัสแผนไม่ถูกต้อง")
+
+        media_type = request.form.get("mediaType", "documents").strip()
+        if media_type not in {"cover", "documents"}:
+            raise BadRequest("ประเภทสื่อไม่ถูกต้อง")
+
+        files = request.files.getlist("productMediaFiles")
+        if not files:
+            raise BadRequest("กรุณาเลือกไฟล์ที่ต้องการอัปโหลด")
+
+        with get_db() as db:
+            for file in files:
+                if not file or not file.filename:
+                    continue
+                extension = get_extension(file.filename)
+                if extension not in ALLOWED_PRODUCT_MEDIA_EXTENSIONS:
+                    raise BadRequest(f"ชนิดไฟล์ {file.filename} ยังไม่รองรับ")
+
+                is_image = extension in {"jpg", "jpeg", "png", "webp"}
+                if media_type == "cover" and not is_image:
+                    raise BadRequest("รูปประกอบต้องเป็นไฟล์รูปภาพเท่านั้น")
+
+                media_kind = "cover" if media_type == "cover" else "pdf" if extension == "pdf" else "image"
+                stored_filename = f"{safe_plan_id}-{secrets.token_hex(8)}.{extension}"
+                file.save(PRODUCT_MEDIA_DIR / stored_filename)
+                saved_path = PRODUCT_MEDIA_DIR / stored_filename
+
+                if media_kind in {"cover", "pdf"}:
+                    old_rows = db.execute(
+                        "SELECT stored_filename FROM product_media WHERE plan_id = ? AND media_kind = ?",
+                        (safe_plan_id, media_kind),
+                    ).fetchall()
+                    db.execute(
+                        "DELETE FROM product_media WHERE plan_id = ? AND media_kind = ?",
+                        (safe_plan_id, media_kind),
+                    )
+                    for row in old_rows:
+                        delete_product_media_file(row["stored_filename"])
+
+                sort_order = next_product_media_sort_order(db, safe_plan_id) if media_kind == "image" else 0
+                db.execute(
+                    """
+                    INSERT INTO product_media (
+                      plan_id, media_kind, stored_filename, original_filename,
+                      mime_type, size_bytes, sort_order, created_at
+                    )
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                    """,
+                    (
+                        safe_plan_id,
+                        media_kind,
+                        stored_filename,
+                        file.filename,
+                        file.mimetype,
+                        saved_path.stat().st_size,
+                        sort_order,
+                        utc_now(),
+                    ),
+                )
+
+        return jsonify(admin_product_media_payload().get(safe_plan_id, empty_product_media()))
+
+    @app.delete("/api/product-media/<plan_id>/files/<filename>")
+    @require_admin
+    def delete_product_media(plan_id: str, filename: str):
+        safe_plan_id = normalize_plan_id(plan_id)
+        safe_filename = Path(filename).name
+        with get_db() as db:
+            row = db.execute(
+                "SELECT stored_filename FROM product_media WHERE plan_id = ? AND stored_filename = ?",
+                (safe_plan_id, safe_filename),
+            ).fetchone()
+            if not row:
+                return jsonify({"error": "ไม่พบไฟล์นี้ในแผนที่เลือก"}), 404
+            db.execute(
+                "DELETE FROM product_media WHERE plan_id = ? AND stored_filename = ?",
+                (safe_plan_id, safe_filename),
+            )
+
+        delete_product_media_file(safe_filename)
+        return jsonify(admin_product_media_payload().get(safe_plan_id, empty_product_media()))
+
     @app.get("/api/attachments/<int:attachment_id>")
     @require_admin
     def download_attachment(attachment_id: int):
@@ -317,11 +424,25 @@ def initialize_database() -> None:
               FOREIGN KEY (policy_id) REFERENCES policies(id) ON DELETE CASCADE
             );
 
+            CREATE TABLE IF NOT EXISTS product_media (
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              plan_id TEXT NOT NULL,
+              media_kind TEXT NOT NULL CHECK (media_kind IN ('cover', 'image', 'pdf')),
+              stored_filename TEXT NOT NULL UNIQUE,
+              original_filename TEXT NOT NULL,
+              mime_type TEXT DEFAULT '',
+              size_bytes INTEGER DEFAULT 0,
+              sort_order INTEGER DEFAULT 0,
+              created_at TEXT NOT NULL
+            );
+
             CREATE INDEX IF NOT EXISTS idx_policies_end_date ON policies(end_date);
             CREATE INDEX IF NOT EXISTS idx_policies_phone ON policies(customer_phone);
             CREATE INDEX IF NOT EXISTS idx_attachments_policy ON attachments(policy_id);
+            CREATE INDEX IF NOT EXISTS idx_product_media_plan ON product_media(plan_id);
             """
         )
+    migrate_product_media_json_to_database()
 
 
 def policy_payload_from_request() -> dict[str, Any]:
@@ -387,12 +508,170 @@ def save_uploaded_files(db: sqlite3.Connection, policy_id: int) -> None:
 
 
 def is_allowed_upload(filename: str) -> bool:
-    extension = filename.rsplit(".", 1)[-1].lower() if "." in filename else ""
-    return extension in ALLOWED_UPLOAD_EXTENSIONS
+    return get_extension(filename) in ALLOWED_UPLOAD_EXTENSIONS
+
+
+def get_extension(filename: str) -> str:
+    return filename.rsplit(".", 1)[-1].lower() if "." in filename else ""
 
 
 def delete_upload_file(stored_filename: str) -> None:
     target = UPLOAD_DIR / stored_filename
+    if target.exists() and target.is_file():
+        target.unlink()
+
+
+def normalize_plan_id(plan_id: str) -> str:
+    return "".join(character for character in str(plan_id) if character.isalnum() or character in {"-", "_"})
+
+
+def empty_product_media() -> dict[str, Any]:
+    return {"cover": None, "images": [], "pdf": None}
+
+
+def next_product_media_sort_order(db: sqlite3.Connection, plan_id: str) -> int:
+    row = db.execute(
+        "SELECT COALESCE(MAX(sort_order), 0) + 1 AS next_order FROM product_media WHERE plan_id = ? AND media_kind = 'image'",
+        (plan_id,),
+    ).fetchone()
+    return int(row["next_order"] if row else 1)
+
+
+def load_product_media_config() -> dict[str, Any]:
+    if not PRODUCT_MEDIA_CONFIG_PATH.exists():
+        return {}
+    try:
+        with PRODUCT_MEDIA_CONFIG_PATH.open("r", encoding="utf-8") as file:
+            payload = json.load(file)
+    except (OSError, json.JSONDecodeError):
+        return {}
+    return payload if isinstance(payload, dict) else {}
+
+
+def save_product_media_config(config: dict[str, Any]) -> None:
+    with PRODUCT_MEDIA_CONFIG_PATH.open("w", encoding="utf-8") as file:
+        json.dump(config, file, ensure_ascii=False, indent=2)
+
+
+def product_media_url(filename: str | None) -> str:
+    if not filename:
+        return ""
+    return f"/product-media/{filename}"
+
+
+def product_media_file_payload(file_info: dict[str, Any] | None) -> dict[str, Any] | None:
+    if not file_info:
+        return None
+    return {
+        **file_info,
+        "url": product_media_url(file_info.get("filename")),
+    }
+
+
+def admin_product_media_payload() -> dict[str, Any]:
+    with get_db() as db:
+        rows = db.execute(
+            """
+            SELECT * FROM product_media
+            ORDER BY plan_id ASC,
+              CASE media_kind WHEN 'cover' THEN 0 WHEN 'image' THEN 1 ELSE 2 END,
+              sort_order ASC,
+              created_at ASC
+            """
+        ).fetchall()
+    payload: dict[str, Any] = {}
+    for row in rows:
+        plan_media = payload.setdefault(row["plan_id"], empty_product_media())
+        file_payload = product_media_row_payload(row)
+        if row["media_kind"] == "cover":
+            plan_media["cover"] = file_payload
+        elif row["media_kind"] == "pdf":
+            plan_media["pdf"] = file_payload
+        else:
+            plan_media["images"].append(file_payload)
+    return payload
+
+
+def public_product_media_payload() -> dict[str, Any]:
+    config = admin_product_media_payload()
+    payload = {}
+    for plan_id, media in config.items():
+        cover = media.get("cover")
+        images = media.get("images", [])
+        pdf = media.get("pdf")
+        payload[plan_id] = {
+            "coverImageUrl": cover["url"] if cover else "",
+            "imageUrls": [image["url"] for image in images if image],
+            "pdfUrl": pdf["url"] if pdf else "",
+        }
+    return payload
+
+
+def product_media_row_payload(row: sqlite3.Row) -> dict[str, Any]:
+    return {
+        "filename": row["stored_filename"],
+        "originalName": row["original_filename"],
+        "size": row["size_bytes"],
+        "type": row["mime_type"],
+        "createdAt": row["created_at"],
+        "url": product_media_url(row["stored_filename"]),
+    }
+
+
+def migrate_product_media_json_to_database() -> None:
+    if not PRODUCT_MEDIA_CONFIG_PATH.exists():
+        return
+    config = load_product_media_config()
+    if not config:
+        return
+    with get_db() as db:
+        existing_count = db.execute("SELECT COUNT(*) AS total FROM product_media").fetchone()["total"]
+        if existing_count:
+            return
+        for plan_id, media in config.items():
+            safe_plan_id = normalize_plan_id(plan_id)
+            if not safe_plan_id or not isinstance(media, dict):
+                continue
+            for media_kind, file_info in (("cover", media.get("cover")), ("pdf", media.get("pdf"))):
+                insert_legacy_product_media_row(db, safe_plan_id, media_kind, file_info, 0)
+            for index, file_info in enumerate(media.get("images", []), start=1):
+                insert_legacy_product_media_row(db, safe_plan_id, "image", file_info, index)
+
+
+def insert_legacy_product_media_row(
+    db: sqlite3.Connection,
+    plan_id: str,
+    media_kind: str,
+    file_info: dict[str, Any] | None,
+    sort_order: int,
+) -> None:
+    if not file_info or not file_info.get("filename"):
+        return
+    db.execute(
+        """
+        INSERT OR IGNORE INTO product_media (
+          plan_id, media_kind, stored_filename, original_filename,
+          mime_type, size_bytes, sort_order, created_at
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+        (
+            plan_id,
+            media_kind,
+            Path(file_info["filename"]).name,
+            file_info.get("originalName") or file_info["filename"],
+            file_info.get("type", ""),
+            int(file_info.get("size") or 0),
+            sort_order,
+            file_info.get("createdAt") or utc_now(),
+        ),
+    )
+
+
+def delete_product_media_file(stored_filename: str | None) -> None:
+    if not stored_filename:
+        return
+    target = PRODUCT_MEDIA_DIR / Path(stored_filename).name
     if target.exists() and target.is_file():
         target.unlink()
 

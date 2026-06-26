@@ -1,0 +1,18 @@
+services:
+  - type: web
+    name: mittare-sattahip-demo
+    runtime: python
+    plan: starter
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn app:app
+    envVars:
+      - key: APP_INSTANCE_DIR
+        value: /var/data
+      - key: ADMIN_PASSWORD
+        sync: false
+      - key: SECRET_KEY
+        generateValue: true
+    disk:
+      name: mittare-data
+      mountPath: /var/data
+      sizeGB: 1

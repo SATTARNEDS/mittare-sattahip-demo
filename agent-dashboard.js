@@ -14,9 +14,46 @@ const authSection = document.querySelector("#agent-auth");
 const loginForm = document.querySelector("#agent-login-form");
 const loginFeedback = document.querySelector("#login-feedback");
 const logoutButton = document.querySelector("#logout-button");
+const productMediaForm = document.querySelector("#product-media-form");
+const productMediaPlan = document.querySelector("#product-media-plan");
+const productMediaList = document.querySelector("#product-media-list");
+const mediaFeedback = document.querySelector("#media-feedback");
 
 let policies = [];
 let selectedPolicyId = "";
+let productMedia = {};
+
+const productMediaPlanOptions = [
+  ["motor-1", "รถยนต์ประเภท 1"],
+  ["motor-2", "รถยนต์ประเภท 2"],
+  ["motor-3", "รถยนต์ประเภท 3"],
+  ["motor-2plus", "รถยนต์ประเภท 2+"],
+  ["motor-3plus", "รถยนต์ประเภท 3+"],
+  ["motor-compulsory", "ประกันภัยรถยนต์ภาคบังคับ"],
+  ["motor-one", "มิตรแท้หนึ่งเดียว"],
+  ["motor-extra", "ป.1 Extra"],
+  ["motor-eco", "แผนรถเก๋ง Eco Car"],
+  ["motor-permpoon", "มิตรแท้เพิ่มพูน 2+"],
+  ["motor-taweekoon", "มิตรแท้ทวีคูณ"],
+  ["motor-permpoon3", "มิตรแท้เพิ่มพูน 3+"],
+  ["residential-fire", "อัคคีภัยที่อยู่อาศัย"],
+  ["home", "ประกันภัยบ้านมิตรแท้"],
+  ["property-risk", "ประกันภัยความเสี่ยงภัยทรัพย์สิน"],
+  ["construction", "ประกันภัยงานก่อสร้าง"],
+  ["pa1", "อุบัติเหตุส่วนบุคคล อบ.1"],
+  ["pa2", "อุบัติเหตุส่วนบุคคล อบ.2"],
+  ["income-hospital", "ชดเชยรายได้กรณีเข้ารักษา"],
+  ["golf", "ประกันภัยสำหรับผู้เล่นกอล์ฟ"],
+  ["sme", "ประกันภัยธุรกิจ SME"],
+  ["public-liability", "ประกันภัยความรับผิดต่อบุคคลภายนอก"],
+  ["carrier", "ประกันภัยความรับผิดผู้ขนส่ง"],
+  ["inland-named", "ขนส่งภายในประเทศแบบระบุภัย"],
+  ["inland-allrisk", "ขนส่งภายในประเทศแบบ All Risks"],
+  ["gold-shop", "ประกันภัยร้านทอง"],
+  ["drone", "ประกันภัยโดรน"],
+  ["fuel-station", "ประกันภัยสถานีบริการเชื้อเพลิง"],
+  ["fuel-ctp", "พ.ร.บ. รถบรรทุก LPG / NGV / น้ำมัน"]
+];
 
 const salesStatusLabels = {
   new: "ลูกค้าใหม่",
@@ -49,7 +86,7 @@ async function initializeAgentDashboard() {
   try {
     const session = await apiFetch("/api/session");
     setAuthenticated(session.authenticated);
-    if (session.authenticated) await refreshPolicies();
+    if (session.authenticated) await Promise.all([refreshPolicies(), refreshProductMedia()]);
   } catch (error) {
     loginFeedback.textContent = "กรุณารันผ่าน Flask server ด้วยคำสั่ง python app.py";
   }
@@ -64,6 +101,12 @@ function setAuthenticated(isAuthenticated) {
 async function refreshPolicies() {
   policies = await apiFetch("/api/policies");
   renderAll();
+}
+
+async function refreshProductMedia() {
+  if (!productMediaForm) return;
+  productMedia = await apiFetch("/api/product-media");
+  renderProductMediaList();
 }
 
 function formatDate(dateValue) {
@@ -233,6 +276,52 @@ function renderCurrentAttachments(policy) {
     : "";
 }
 
+function initializeProductMediaPlanOptions() {
+  if (!productMediaPlan) return;
+  productMediaPlan.innerHTML = productMediaPlanOptions
+    .map(([value, label]) => `<option value="${escapeHtml(value)}">${escapeHtml(label)}</option>`)
+    .join("");
+}
+
+function getPlanLabel(planId) {
+  return productMediaPlanOptions.find(([value]) => value === planId)?.[1] || planId;
+}
+
+function renderProductMediaList() {
+  if (!productMediaList || !productMediaPlan) return;
+  const planId = productMediaPlan.value;
+  const media = productMedia[planId] || { cover: null, images: [], pdf: null };
+  const files = [
+    media.cover ? { ...media.cover, label: "รูปประกอบ" } : null,
+    ...(media.images || []).map((image, index) => ({ ...image, label: `รูปเอกสาร ${index + 1}` })),
+    media.pdf ? { ...media.pdf, label: "PDF เอกสาร" } : null
+  ].filter(Boolean);
+
+  productMediaList.innerHTML = files.length
+    ? `
+      <strong>${escapeHtml(getPlanLabel(planId))}</strong>
+      ${files.map((file) => `
+        <div class="media-file-card">
+          ${file.url && file.type?.startsWith("image/")
+            ? `<img src="${escapeHtml(file.url)}" alt="">`
+            : `<span class="media-file-card__icon">PDF</span>`}
+          <div>
+            <b>${escapeHtml(file.label)}</b>
+            <a href="${escapeHtml(file.url)}" target="_blank" rel="noopener">${escapeHtml(file.originalName || file.filename)}</a>
+            <small>${Math.round((file.size || 0) / 1024)} KB</small>
+          </div>
+          <button type="button" data-remove-product-media="${escapeHtml(file.filename)}">ลบ</button>
+        </div>
+      `).join("")}
+    `
+    : `
+      <div class="plan-empty plan-empty--compact">
+        <strong>ยังไม่มีไฟล์สำหรับ ${escapeHtml(getPlanLabel(planId))}</strong>
+        <span>ถ้าไม่อัปโหลด ระบบจะใช้รูปและเอกสารเดิมจากโฟลเดอร์ document/assets</span>
+      </div>
+    `;
+}
+
 function resetForm() {
   policyForm.reset();
   document.querySelector("#policy-id").value = "";
@@ -370,6 +459,39 @@ async function clearAllData() {
   backupFeedback.textContent = "ลบข้อมูลทั้งหมดแล้ว";
 }
 
+async function handleProductMediaSubmit(event) {
+  event.preventDefault();
+  try {
+    const formData = new FormData(productMediaForm);
+    const planId = formData.get("planId");
+    await apiFetch(`/api/product-media/${encodeURIComponent(planId)}`, {
+      method: "POST",
+      body: formData
+    });
+    productMediaForm.querySelector("#product-media-files").value = "";
+    mediaFeedback.textContent = "อัปโหลดไฟล์เข้าคลังรูปเว็บเรียบร้อยแล้ว";
+    await refreshProductMedia();
+  } catch (error) {
+    mediaFeedback.textContent = error.message;
+  }
+}
+
+async function removeProductMedia(filename) {
+  if (!productMediaPlan?.value || !filename) return;
+  const confirmed = window.confirm("ต้องการลบไฟล์นี้ออกจากหน้าเว็บใช่ไหม");
+  if (!confirmed) return;
+  try {
+    await apiFetch(
+      `/api/product-media/${encodeURIComponent(productMediaPlan.value)}/files/${encodeURIComponent(filename)}`,
+      { method: "DELETE" }
+    );
+    mediaFeedback.textContent = "ลบไฟล์ออกจากคลังรูปเว็บแล้ว";
+    await refreshProductMedia();
+  } catch (error) {
+    mediaFeedback.textContent = error.message;
+  }
+}
+
 loginForm?.addEventListener("submit", async (event) => {
   event.preventDefault();
   try {
@@ -380,7 +502,7 @@ loginForm?.addEventListener("submit", async (event) => {
     });
     loginForm.reset();
     setAuthenticated(true);
-    await refreshPolicies();
+    await Promise.all([refreshPolicies(), refreshProductMedia()]);
   } catch (error) {
     loginFeedback.textContent = error.message;
   }
@@ -414,6 +536,14 @@ currentAttachments?.addEventListener("click", (event) => {
   removeAttachment(button.dataset.removeAttachment);
 });
 
+productMediaForm?.addEventListener("submit", handleProductMediaSubmit);
+productMediaPlan?.addEventListener("change", renderProductMediaList);
+productMediaList?.addEventListener("click", (event) => {
+  const button = event.target.closest("button[data-remove-product-media]");
+  if (!button) return;
+  removeProductMedia(button.dataset.removeProductMedia);
+});
+
 document.querySelector("#copy-message")?.addEventListener("click", async () => {
   if (!generatedMessage.value) return;
   try {
@@ -430,4 +560,5 @@ document.querySelector("#add-sample-data")?.addEventListener("click", addSampleD
 document.querySelector("#export-data")?.addEventListener("click", exportData);
 document.querySelector("#clear-all-data")?.addEventListener("click", clearAllData);
 
+initializeProductMediaPlanOptions();
 initializeAgentDashboard();

@@ -38,6 +38,7 @@
         <a href="customer-status.html">หน้าลูกค้า</a>
         <a href="#policy-form">เพิ่มกรมธรรม์</a>
         <a href="#policy-list">รายการติดตาม</a>
+        <a href="#media-manager">คลังรูปเว็บ</a>
         <a class="button button--small button--dark" href="#agent-tools">สำรองข้อมูล</a>
         <button class="text-button" id="logout-button" type="button" hidden>ออกจากระบบ</button>
       </nav>
@@ -252,6 +253,52 @@
             <a class="button button--dark" id="open-line-share" href="#" target="_blank" rel="noopener" aria-disabled="true">เปิด LINE</a>
           </div>
           <p class="agent-note">LINE Share เป็นการเปิดหน้าส่งข้อความให้คุณกดส่งเอง ไม่ใช่การส่งอัตโนมัติถึงลูกค้าทุกคน</p>
+        </aside>
+      </div>
+    </section>
+
+    <section class="agent-media-section section" id="media-manager" aria-labelledby="media-manager-title">
+      <div class="container agent-media__grid">
+        <form class="agent-form" id="product-media-form">
+          <div class="calculator-heading">
+            <div>
+              <span>03</span>
+              <h2 id="media-manager-title">จัดการรูปหน้าเว็บและเอกสารสินค้า</h2>
+            </div>
+          </div>
+
+          <div class="form-grid">
+            <div class="form-row">
+              <label for="product-media-plan">แผนประกัน</label>
+              <select id="product-media-plan" name="planId" required></select>
+            </div>
+            <div class="form-row">
+              <label for="product-media-type">ประเภทสื่อ</label>
+              <select id="product-media-type" name="mediaType" required>
+                <option value="cover">รูปประกอบการ์ด/หน้าต่างสินค้า</option>
+                <option value="documents">รูปภาพเอกสารหรือ PDF</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <label for="product-media-files">เลือกไฟล์</label>
+            <input id="product-media-files" name="productMediaFiles" type="file" accept="image/*,.pdf" multiple required>
+            <p class="field-help">ไฟล์เอกสารจะแสดงในหน้าต่างเอกสารบนเว็บ ส่วนรูปประกอบจะแทนรูปหมวดหมู่บนการ์ดและรายละเอียดสินค้า</p>
+          </div>
+
+          <button class="button button--primary button--submit" type="submit">
+            อัปโหลดเข้าคลังรูปเว็บ
+            <svg aria-hidden="true" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg>
+          </button>
+          <p class="form-note" id="media-feedback" role="status" aria-live="polite">รองรับ JPG, PNG, WebP และ PDF ขนาดไม่เกิน 8 MB ต่อ request</p>
+        </form>
+
+        <aside class="agent-message-panel agent-media-panel" aria-labelledby="media-list-title">
+          <p class="eyebrow eyebrow--dark"><span></span> Product Media</p>
+          <h2 id="media-list-title">ไฟล์ที่ใช้แสดงบนเว็บ</h2>
+          <p>เลือกแผนด้านซ้ายเพื่อดูไฟล์ที่ตั้งไว้ ลบไฟล์ได้ทันทีถ้าไม่ต้องการให้หน้าเว็บใช้ไฟล์นั้นแล้ว</p>
+          <div class="agent-media-list" id="product-media-list" aria-live="polite"></div>
         </aside>
       </div>
     </section>
