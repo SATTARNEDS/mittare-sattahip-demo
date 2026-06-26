@@ -15,6 +15,7 @@ const loginForm = document.querySelector("#agent-login-form");
 const loginFeedback = document.querySelector("#login-feedback");
 const logoutButton = document.querySelector("#logout-button");
 const agentPrivateNav = document.querySelector("#agent-private-nav");
+const agentLoading = document.querySelector("#agent-loading");
 const productMediaForm = document.querySelector("#product-media-form");
 const productMediaPlan = document.querySelector("#product-media-plan");
 const productMediaList = document.querySelector("#product-media-list");
@@ -27,6 +28,12 @@ let policies = [];
 let selectedPolicyId = "";
 let productMedia = {};
 let linePushConfigured = false;
+
+function setAgentLoading(isLoading, message = "กำลังเตรียมข้อมูลหลังบ้าน") {
+  if (!agentLoading) return;
+  agentLoading.hidden = !isLoading;
+  agentLoading.querySelector("strong").textContent = message;
+}
 
 const productMediaPlanOptions = [
   ["motor-1", "รถยนต์ประเภท 1"],
@@ -173,12 +180,15 @@ async function apiFetch(url, options = {}) {
 
 async function initializeAgentDashboard() {
   try {
+    setAgentLoading(true, "กำลังตรวจสอบสิทธิ์เข้าใช้งาน");
     const session = await apiFetch("/api/session");
     linePushConfigured = Boolean(session.linePushConfigured);
     setAuthenticated(session.authenticated);
     if (session.authenticated) await Promise.all([refreshPolicies(), refreshProductMedia()]);
   } catch (error) {
     loginFeedback.textContent = "กรุณารันผ่าน Flask server ด้วยคำสั่ง python app.py";
+  } finally {
+    setAgentLoading(false);
   }
 }
 
@@ -195,15 +205,25 @@ function setAuthenticated(isAuthenticated) {
 }
 
 async function refreshPolicies() {
-  policies = await apiFetch("/api/policies");
-  renderAll();
+  setAgentLoading(true, "กำลังโหลดรายการกรมธรรม์");
+  try {
+    policies = await apiFetch("/api/policies");
+    renderAll();
+  } finally {
+    setAgentLoading(false);
+  }
 }
 
 async function refreshProductMedia() {
   if (!productMediaForm) return;
-  productMedia = await apiFetch("/api/product-media");
-  renderProductMediaPreview();
-  renderProductMediaList();
+  setAgentLoading(true, "กำลังโหลดคลังรูปและเอกสาร");
+  try {
+    productMedia = await apiFetch("/api/product-media");
+    renderProductMediaPreview();
+    renderProductMediaList();
+  } finally {
+    setAgentLoading(false);
+  }
 }
 
 function formatDate(dateValue) {

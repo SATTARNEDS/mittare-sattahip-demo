@@ -225,6 +225,23 @@ mainNavigation?.querySelectorAll("a").forEach((link) => {
   });
 });
 
+function markActiveNavigation() {
+  const currentPath = window.location.pathname.split("/").pop() || "index.html";
+  const currentCategory = new URLSearchParams(window.location.search).get("category");
+  mainNavigation?.querySelectorAll("a[href]").forEach((link) => {
+    const linkUrl = new URL(link.getAttribute("href"), window.location.href);
+    const linkPath = linkUrl.pathname.split("/").pop() || "index.html";
+    const linkCategory = linkUrl.searchParams.get("category");
+    const isActive = linkUrl.hash
+      ? linkPath === currentPath && window.location.hash === linkUrl.hash
+      : linkPath === currentPath && (!linkCategory || linkCategory === currentCategory);
+    link.classList.toggle("is-current", isActive);
+    if (isActive) link.setAttribute("aria-current", "page");
+  });
+}
+
+markActiveNavigation();
+
 document.querySelectorAll(".profile-trigger").forEach((button) => {
   button.addEventListener("click", () => {
     const profile = profileData[button.dataset.profile];

@@ -1,6 +1,28 @@
 const customerLookupForm = document.querySelector("#customer-lookup-form");
 const customerLookupFeedback = document.querySelector("#customer-lookup-feedback");
 const customerStatusGrid = document.querySelector("#customer-status-grid");
+const customerStatusLoading = document.querySelector("#customer-status-loading");
+const menuButton = document.querySelector(".menu-toggle");
+const mainNavigation = document.querySelector(".main-nav");
+
+menuButton?.addEventListener("click", () => {
+  const isOpen = menuButton.getAttribute("aria-expanded") === "true";
+  menuButton.setAttribute("aria-expanded", String(!isOpen));
+  mainNavigation?.classList.toggle("is-open", !isOpen);
+});
+
+mainNavigation?.querySelectorAll("a").forEach((link) => {
+  link.addEventListener("click", () => {
+    menuButton?.setAttribute("aria-expanded", "false");
+    mainNavigation.classList.remove("is-open");
+  });
+  const currentPath = window.location.pathname.split("/").pop() || "index.html";
+  const linkPath = new URL(link.getAttribute("href"), window.location.href).pathname.split("/").pop() || "index.html";
+  if (linkPath === currentPath) {
+    link.classList.add("is-current");
+    link.setAttribute("aria-current", "page");
+  }
+});
 
 const salesStatusLabels = {
   new: "รับเรื่องแล้ว",
@@ -98,10 +120,20 @@ function renderCustomerPolicies(policies) {
   }).join("");
 }
 
+function setCustomerLoading(isLoading) {
+  if (!customerStatusLoading || !customerStatusGrid || !customerLookupForm) return;
+  customerStatusLoading.hidden = !isLoading;
+  customerStatusLoading.setAttribute("aria-hidden", String(!isLoading));
+  customerStatusGrid.hidden = isLoading;
+  const submitButton = customerLookupForm.querySelector("button[type='submit']");
+  if (submitButton) submitButton.disabled = isLoading;
+}
+
 customerLookupForm?.addEventListener("submit", async (event) => {
   event.preventDefault();
   const formData = new FormData(customerLookupForm);
   customerLookupFeedback.textContent = "กำลังตรวจสอบข้อมูล...";
+  setCustomerLoading(true);
   try {
     const response = await fetch("/api/customer/policies", {
       method: "POST",
@@ -119,5 +151,7 @@ customerLookupForm?.addEventListener("submit", async (event) => {
       : "ไม่พบข้อมูลที่ตรงกัน";
   } catch (error) {
     customerLookupFeedback.textContent = error.message;
+  } finally {
+    setCustomerLoading(false);
   }
 });
