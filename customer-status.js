@@ -1,3 +1,4 @@
+(() => {
 const customerLookupForm = document.querySelector("#customer-lookup-form");
 const customerLookupFeedback = document.querySelector("#customer-lookup-feedback");
 const customerStatusGrid = document.querySelector("#customer-status-grid");
@@ -187,3 +188,4 @@ customerLookupForm?.addEventListener("submit", async (event) => {
     focusCustomerResults();
   }
 });
+})();
