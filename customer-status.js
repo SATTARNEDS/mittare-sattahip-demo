@@ -84,7 +84,7 @@ function renderCustomerPolicies(policies) {
     customerStatusGrid.innerHTML = `
       <div class="plan-empty">
         <strong>ไม่พบข้อมูล</strong>
-        <span>ตรวจสอบเบอร์โทรและเลขอ้างอิงอีกครั้ง หรือติดต่อทีมผู้ดูแล</span>
+        <span>ตรวจสอบเบอร์โทร หรือเลขอ้างอิง/เลขกรมธรรม์อีกครั้ง หรือติดต่อทีมผู้ดูแล</span>
       </div>
     `;
     return;
@@ -132,6 +132,12 @@ function setCustomerLoading(isLoading) {
 customerLookupForm?.addEventListener("submit", async (event) => {
   event.preventDefault();
   const formData = new FormData(customerLookupForm);
+  const phone = String(formData.get("phone") || "").trim();
+  const reference = String(formData.get("reference") || "").trim();
+  if (!phone && !reference) {
+    customerLookupFeedback.textContent = "กรุณากรอกเบอร์โทร หรือเลขอ้างอิง/เลขกรมธรรม์ อย่างน้อยหนึ่งช่อง";
+    return;
+  }
   customerLookupFeedback.textContent = "กำลังตรวจสอบข้อมูล...";
   setCustomerLoading(true);
   try {
@@ -139,8 +145,8 @@ customerLookupForm?.addEventListener("submit", async (event) => {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        phone: formData.get("phone"),
-        reference: formData.get("reference")
+        phone,
+        reference
       })
     });
     const payload = await response.json();

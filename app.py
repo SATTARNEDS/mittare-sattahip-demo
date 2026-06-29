@@ -510,17 +510,29 @@ def create_app() -> Flask:
         data = request.get_json(silent=True) or {}
         phone = normalize_phone(data.get("phone", ""))
         reference = str(data.get("reference", "")).strip()
-        if len(phone) < 4 or not reference:
-            return jsonify({"error": "กรุณากรอกเบอร์โทรและเลขอ้างอิง"}), 400
+        if not phone and not reference:
+            return jsonify({"error": "กรุณากรอกเบอร์โทร หรือเลขอ้างอิง/เลขกรมธรรม์ อย่างน้อยหนึ่งช่อง"}), 400
+        if phone and len(phone) < 6:
+            return jsonify({"error": "กรุณากรอกเบอร์โทรอย่างน้อย 6 หลักเพื่อความปลอดภัย"}), 400
+
+        filters = []
+        params: list[str] = []
+        if phone:
+            filters.append("REPLACE(REPLACE(REPLACE(customer_phone, '-', ''), ' ', ''), '+66', '0') LIKE ?")
+            params.append(f"%{phone[-6:]}")
+        if reference:
+            filters.append("(public_ref COLLATE NOCASE = ? OR policy_number COLLATE NOCASE = ?)")
+            params.extend([reference, reference])
+
         with get_db() as db:
             rows = db.execute(
-                """
+                f"""
                 SELECT * FROM policies
-                WHERE REPLACE(REPLACE(REPLACE(customer_phone, '-', ''), ' ', ''), '+66', '0') LIKE ?
-                  AND (public_ref = ? OR policy_number = ?)
+                WHERE {" OR ".join(filters)}
                 ORDER BY end_date DESC
+                LIMIT 20
                 """,
-                (f"%{phone[-6:]}", reference, reference),
+                params,
             ).fetchall()
             return jsonify([policy_to_dict(db, row, include_private=False) for row in rows])
 

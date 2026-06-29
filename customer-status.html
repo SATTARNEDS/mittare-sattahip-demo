@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="หน้าลูกค้าทดลองเช็กสถานะกรมธรรม์ Mittare Sattahip ด้วยเบอร์โทรและเลขอ้างอิง">
+  <meta name="description" content="หน้าลูกค้าทดลองเช็กสถานะกรมธรรม์ Mittare Sattahip ด้วยเบอร์โทร เลขอ้างอิง หรือเลขกรมธรรม์">
   <meta name="theme-color" content="#075c55">
   <title>เช็กสถานะกรมธรรม์ | Mittare Sattahip</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -47,19 +47,19 @@
         <div>
           <p class="eyebrow"><span></span> Customer Self-Service</p>
           <h1 id="customer-title">เช็กสถานะกรมธรรม์และงานต่ออายุ</h1>
-          <p>กรอกเบอร์โทรและเลขอ้างอิงที่ทีมส่งให้ เพื่อดูวันหมดอายุ สถานะงาน และข้อมูลที่ควรเตรียม</p>
+          <p>กรอกเบอร์โทร หรือเลขอ้างอิง/เลขกรมธรรม์ อย่างใดอย่างหนึ่ง เพื่อดูวันหมดอายุ สถานะงาน และข้อมูลที่ควรเตรียม</p>
         </div>
         <form class="customer-lookup-form" id="customer-lookup-form">
           <div class="form-row">
             <label for="lookup-phone">เบอร์โทรศัพท์</label>
-            <input id="lookup-phone" name="phone" type="tel" inputmode="tel" autocomplete="tel" placeholder="081-111-2222" required>
+            <input id="lookup-phone" name="phone" type="tel" inputmode="tel" autocomplete="tel" placeholder="081-111-2222">
           </div>
           <div class="form-row">
             <label for="lookup-reference">เลขอ้างอิง / เลขกรมธรรม์</label>
-            <input id="lookup-reference" name="reference" type="text" placeholder="MT4-DEMO-001" required>
+            <input id="lookup-reference" name="reference" type="text" placeholder="MT4-DEMO-001">
           </div>
           <button class="button button--primary button--submit" type="submit">ตรวจสอบสถานะ</button>
-          <p class="form-note" id="customer-lookup-feedback" role="status" aria-live="polite">สำหรับทดสอบ: ใช้เบอร์ 081-111-2222 และเลข MT4-DEMO-001 หลังเพิ่มข้อมูลตัวอย่างจากหลังบ้าน</p>
+          <p class="form-note" id="customer-lookup-feedback" role="status" aria-live="polite">สำหรับทดสอบ: ใช้เบอร์ 081-111-2222 หรือเลข MT4-DEMO-001 หลังเพิ่มข้อมูลตัวอย่างจากหลังบ้าน</p>
         </form>
       </div>
     </section>
@@ -76,7 +76,7 @@
         <div class="customer-status-grid" id="customer-status-grid">
           <div class="plan-empty">
             <strong>ยังไม่มีข้อมูลที่แสดง</strong>
-            <span>กรอกเบอร์โทรและเลขอ้างอิงด้านบนเพื่อเริ่มตรวจสอบ</span>
+            <span>กรอกเบอร์โทร หรือเลขอ้างอิง/เลขกรมธรรม์ด้านบนเพื่อเริ่มตรวจสอบ</span>
           </div>
         </div>
         <div class="customer-status-grid is-loading" id="customer-status-loading" hidden aria-hidden="true">
