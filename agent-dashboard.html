@@ -308,6 +308,7 @@
             บันทึกข้อมูลกรมธรรม์
             <svg aria-hidden="true" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg>
           </button>
+          <p class="form-note" id="form-feedback" role="status" aria-live="polite">พร้อมบันทึกข้อมูลลง SQLite</p>
         </form>
 
         <aside class="agent-message-panel" aria-labelledby="message-title">
@@ -415,6 +416,21 @@
       <p>ข้อมูลเก็บใน SQLite และไฟล์แนบเก็บในเซิร์ฟเวอร์ที่รันระบบ</p>
     </div>
   </footer>
+
+  <dialog class="attachment-dialog" id="attachment-dialog" aria-labelledby="attachment-dialog-title">
+    <header class="attachment-dialog__header">
+      <div>
+        <span>Policy Attachment</span>
+        <h2 id="attachment-dialog-title">ไฟล์แนบกรมธรรม์</h2>
+      </div>
+      <button class="dialog-close" id="attachment-dialog-close" type="button" aria-label="ปิดไฟล์แนบ">×</button>
+    </header>
+    <div class="attachment-dialog__viewer" id="attachment-dialog-viewer"></div>
+    <footer class="attachment-dialog__footer">
+      <span id="attachment-dialog-meta">ดูไฟล์ภายในหน้าเว็บ</span>
+      <a class="button button--dark button--small" id="attachment-dialog-download" href="#" download>ดาวน์โหลดไฟล์</a>
+    </footer>
+  </dialog>
 
   <script src="script.js"></script>
   <script src="agent-dashboard.js"></script>

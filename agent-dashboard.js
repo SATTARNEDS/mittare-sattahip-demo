@@ -1,3 +1,4 @@
+(() => {
 const policyForm = document.querySelector("#agent-policy-form");
 const policyTableBody = document.querySelector("#policy-table-body");
 const policyEmpty = document.querySelector("#policy-empty");
@@ -26,6 +27,11 @@ const linePushFeedback = document.querySelector("#line-push-feedback");
 const adminLineFeedback = document.querySelector("#admin-line-feedback");
 const adminLineRecipient = document.querySelector("#admin-line-recipient");
 const sendAdminAlertButton = document.querySelector("#send-admin-alert");
+const attachmentDialog = document.querySelector("#attachment-dialog");
+const attachmentDialogTitle = document.querySelector("#attachment-dialog-title");
+const attachmentDialogViewer = document.querySelector("#attachment-dialog-viewer");
+const attachmentDialogMeta = document.querySelector("#attachment-dialog-meta");
+const attachmentDialogDownload = document.querySelector("#attachment-dialog-download");
 
 let policies = [];
 let selectedPolicyId = "";
@@ -433,13 +439,46 @@ function renderCurrentAttachments(policy) {
       <h3>ไฟล์ที่แนบไว้</h3>
       ${attachments.map((file) => `
         <div class="attachment-chip">
-          <a href="${file.url}" target="_blank" rel="noopener">${escapeHtml(file.name)}</a>
+          <button class="attachment-chip__preview" type="button" data-view-attachment="${file.id}">${escapeHtml(file.name)}</button>
           <span>${Math.round(file.size / 1024)} KB</span>
+          <a href="${file.url}?download=1" download>ดาวน์โหลด</a>
           <button type="button" data-remove-attachment="${file.id}">ลบไฟล์</button>
         </div>
       `).join("")}
     `
     : "";
+}
+
+function renderAttachmentViewer(file) {
+  if (!attachmentDialog || !attachmentDialogViewer || !file) return;
+  attachmentDialogTitle.textContent = file.name || "ไฟล์แนบกรมธรรม์";
+  attachmentDialogMeta.textContent = `${file.type || "ไฟล์แนบ"} · ${Math.round((file.size || 0) / 1024)} KB`;
+  attachmentDialogDownload.href = `${file.url}?download=1`;
+  attachmentDialogDownload.setAttribute("download", file.name || "");
+
+  const sourceUrl = `${file.url}#toolbar=1&navpanes=0`;
+  if (file.type?.startsWith("image/")) {
+    attachmentDialogViewer.innerHTML = `<img src="${escapeHtml(file.url)}" alt="${escapeHtml(file.name)}">`;
+  } else if (file.type === "application/pdf") {
+    attachmentDialogViewer.innerHTML = `<iframe src="${escapeHtml(sourceUrl)}" title="${escapeHtml(file.name)}"></iframe>`;
+  } else {
+    attachmentDialogViewer.innerHTML = `
+      <div class="attachment-dialog__fallback">
+        <strong>กำลังเปิดไฟล์ในหน้าเว็บ</strong>
+        <span>ไฟล์บางชนิด เช่น Word หรือ Excel อาจขึ้นอยู่กับ browser ว่าสามารถแสดงตัวอย่างได้หรือไม่</span>
+        <iframe src="${escapeHtml(file.url)}" title="${escapeHtml(file.name)}"></iframe>
+      </div>
+    `;
+  }
+  attachmentDialog.showModal();
+}
+
+function findAttachmentById(attachmentId) {
+  for (const policy of policies) {
+    const attachment = policy.attachments?.find((file) => String(file.id) === String(attachmentId));
+    if (attachment) return attachment;
+  }
+  return null;
 }
 
 function initializeProductMediaPlanOptions() {
@@ -540,7 +579,7 @@ function editPolicy(policyId) {
   document.querySelector("#customer-name").value = policy.customerName || "";
   document.querySelector("#customer-phone").value = policy.customerPhone || "";
   document.querySelector("#line-name").value = policy.lineName || "";
-  document.querySelector("#line-user-id").value = "";
+  document.querySelector("#line-user-id").value = policy.lineUserId || "";
   document.querySelector("#assigned-agent").value = policy.assignedAgent || "";
   document.querySelector("#insurance-category").value = policy.insuranceCategory || "รถยนต์";
   renderPolicyProductOptions(policy.productName || "");
@@ -619,13 +658,21 @@ async function handleFormSubmit(event) {
   try {
     const formData = new FormData(policyForm);
     const policyId = formData.get("policyId");
+    const wasEditing = Boolean(policyId);
     const endpoint = policyId ? `/api/policies/${policyId}` : "/api/policies";
     const method = policyId ? "PUT" : "POST";
     const savedPolicy = await apiFetch(endpoint, { method, body: formData });
     selectedPolicyId = String(savedPolicy.id);
-    resetForm();
-    formFeedback.textContent = "บันทึกข้อมูลลง SQLite เรียบร้อยแล้ว";
     await refreshPolicies();
+    if (wasEditing) {
+      editPolicy(savedPolicy.id);
+      formFeedback.textContent = "อัปเดตข้อมูลกรมธรรม์เรียบร้อยแล้ว";
+    } else {
+      resetForm();
+      selectedPolicyId = String(savedPolicy.id);
+      renderPolicyTable();
+      formFeedback.textContent = "บันทึกข้อมูลลง SQLite เรียบร้อยแล้ว";
+    }
   } catch (error) {
     formFeedback.textContent = error.message;
   }
@@ -793,9 +840,14 @@ policyTableBody?.addEventListener("click", (event) => {
 });
 
 currentAttachments?.addEventListener("click", (event) => {
-  const button = event.target.closest("button[data-remove-attachment]");
-  if (!button) return;
-  removeAttachment(button.dataset.removeAttachment);
+  const viewButton = event.target.closest("button[data-view-attachment]");
+  if (viewButton) {
+    renderAttachmentViewer(findAttachmentById(viewButton.dataset.viewAttachment));
+    return;
+  }
+  const removeButton = event.target.closest("button[data-remove-attachment]");
+  if (!removeButton) return;
+  removeAttachment(removeButton.dataset.removeAttachment);
 });
 
 productMediaForm?.addEventListener("submit", handleProductMediaSubmit);
@@ -840,3 +892,11 @@ document.querySelector("#clear-all-data")?.addEventListener("click", clearAllDat
 initializeProductMediaPlanOptions();
 renderPolicyProductOptions();
 initializeAgentDashboard();
+attachmentDialog?.addEventListener("click", (event) => {
+  if (event.target === attachmentDialog) attachmentDialog.close();
+});
+document.querySelector("#attachment-dialog-close")?.addEventListener("click", () => attachmentDialog?.close());
+attachmentDialog?.addEventListener("close", () => {
+  if (attachmentDialogViewer) attachmentDialogViewer.innerHTML = "";
+});
+})();

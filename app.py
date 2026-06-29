@@ -481,7 +481,7 @@ def create_app() -> Flask:
         return send_from_directory(
             UPLOAD_DIR,
             attachment["stored_filename"],
-            as_attachment=True,
+            as_attachment=request.args.get("download") == "1",
             download_name=attachment["original_filename"],
         )
 
