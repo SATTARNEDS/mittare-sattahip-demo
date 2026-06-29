@@ -2,6 +2,7 @@ const customerLookupForm = document.querySelector("#customer-lookup-form");
 const customerLookupFeedback = document.querySelector("#customer-lookup-feedback");
 const customerStatusGrid = document.querySelector("#customer-status-grid");
 const customerStatusLoading = document.querySelector("#customer-status-loading");
+const customerResultsSection = document.querySelector(".customer-results");
 const menuButton = document.querySelector(".menu-toggle");
 const mainNavigation = document.querySelector(".main-nav");
 
@@ -120,13 +121,29 @@ function renderCustomerPolicies(policies) {
   }).join("");
 }
 
+function renderCustomerNotice(title, message) {
+  if (!customerStatusGrid) return;
+  customerStatusGrid.innerHTML = `
+    <div class="plan-empty">
+      <strong>${escapeHtml(title)}</strong>
+      <span>${escapeHtml(message)}</span>
+    </div>
+  `;
+}
+
 function setCustomerLoading(isLoading) {
   if (!customerStatusLoading || !customerStatusGrid || !customerLookupForm) return;
   customerStatusLoading.hidden = !isLoading;
   customerStatusLoading.setAttribute("aria-hidden", String(!isLoading));
   customerStatusGrid.hidden = isLoading;
+  customerStatusGrid.toggleAttribute("hidden", isLoading);
   const submitButton = customerLookupForm.querySelector("button[type='submit']");
   if (submitButton) submitButton.disabled = isLoading;
+}
+
+function focusCustomerResults() {
+  if (!customerResultsSection) return;
+  customerResultsSection.scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
 customerLookupForm?.addEventListener("submit", async (event) => {
@@ -136,9 +153,12 @@ customerLookupForm?.addEventListener("submit", async (event) => {
   const reference = String(formData.get("reference") || "").trim();
   if (!phone && !reference) {
     customerLookupFeedback.textContent = "กรุณากรอกเบอร์โทร หรือเลขอ้างอิง/เลขกรมธรรม์ อย่างน้อยหนึ่งช่อง";
+    renderCustomerNotice("ยังไม่ได้กรอกข้อมูลค้นหา", "กรอกเบอร์โทร หรือเลขอ้างอิง/เลขกรมธรรม์ อย่างน้อยหนึ่งช่อง");
+    focusCustomerResults();
     return;
   }
   customerLookupFeedback.textContent = "กำลังตรวจสอบข้อมูล...";
+  renderCustomerNotice("กำลังตรวจสอบข้อมูล", "ระบบกำลังค้นหาสถานะกรมธรรม์จากข้อมูลที่กรอก");
   setCustomerLoading(true);
   try {
     const response = await fetch("/api/customer/policies", {
@@ -149,15 +169,21 @@ customerLookupForm?.addEventListener("submit", async (event) => {
         reference
       })
     });
-    const payload = await response.json();
-    if (!response.ok) throw new Error(payload.error || "ตรวจสอบข้อมูลไม่สำเร็จ");
+    const contentType = response.headers.get("content-type") || "";
+    const payload = contentType.includes("application/json") ? await response.json() : null;
+    if (!response.ok) throw new Error(payload?.error || "ตรวจสอบข้อมูลไม่สำเร็จ");
+    if (!Array.isArray(payload)) {
+      throw new Error("กรุณารันผ่าน Flask server แล้วเปิด http://127.0.0.1:5000/customer-status.html");
+    }
     renderCustomerPolicies(payload);
     customerLookupFeedback.textContent = payload.length
-      ? "พบข้อมูลกรมธรรม์แล้ว"
-      : "ไม่พบข้อมูลที่ตรงกัน";
+      ? `พบข้อมูลกรมธรรม์ ${payload.length} รายการ เลื่อนลงไปดูผลการตรวจสอบ`
+      : "ไม่พบข้อมูลที่ตรงกัน เลื่อนลงไปดูรายละเอียด";
   } catch (error) {
     customerLookupFeedback.textContent = error.message;
+    renderCustomerNotice("ตรวจสอบข้อมูลไม่สำเร็จ", error.message);
   } finally {
     setCustomerLoading(false);
+    focusCustomerResults();
   }
 });
