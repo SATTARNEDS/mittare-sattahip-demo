@@ -4,6 +4,7 @@ const customerLookupFeedback = document.querySelector("#customer-lookup-feedback
 const customerStatusGrid = document.querySelector("#customer-status-grid");
 const customerStatusLoading = document.querySelector("#customer-status-loading");
 const customerResultsSection = document.querySelector(".customer-results");
+const lookupPhoneInput = document.querySelector("#lookup-phone");
 const menuButton = document.querySelector(".menu-toggle");
 const mainNavigation = document.querySelector(".main-nav");
 
@@ -81,6 +82,39 @@ function escapeHtml(value) {
     .replaceAll("'", "&#039;");
 }
 
+function digitsOnly(value) {
+  return String(value || "").replace(/\D/g, "");
+}
+
+function formatThaiPhoneNumber(value) {
+  const digits = digitsOnly(value).slice(0, 10);
+  if (digits.length <= 3) return digits;
+  if (digits.length <= 6) return `${digits.slice(0, 3)}-${digits.slice(3)}`;
+  return `${digits.slice(0, 3)}-${digits.slice(3, 6)}-${digits.slice(6)}`;
+}
+
+function countDigitsBeforeCursor(value, cursorPosition) {
+  return digitsOnly(value.slice(0, cursorPosition)).length;
+}
+
+function cursorFromDigitCount(formattedValue, digitCount) {
+  if (digitCount <= 0) return 0;
+  let seenDigits = 0;
+  for (let index = 0; index < formattedValue.length; index += 1) {
+    if (/\d/.test(formattedValue[index])) seenDigits += 1;
+    if (seenDigits >= digitCount) return index + 1;
+  }
+  return formattedValue.length;
+}
+
+function formatPhoneInputValue(input) {
+  const digitCount = countDigitsBeforeCursor(input.value, input.selectionStart || 0);
+  const formattedValue = formatThaiPhoneNumber(input.value);
+  input.value = formattedValue;
+  const nextCursor = cursorFromDigitCount(formattedValue, digitCount);
+  input.setSelectionRange(nextCursor, nextCursor);
+}
+
 function renderCustomerPolicies(policies) {
   if (!policies.length) {
     customerStatusGrid.innerHTML = `
@@ -150,7 +184,7 @@ function focusCustomerResults() {
 customerLookupForm?.addEventListener("submit", async (event) => {
   event.preventDefault();
   const formData = new FormData(customerLookupForm);
-  const phone = String(formData.get("phone") || "").trim();
+  const phone = formatThaiPhoneNumber(formData.get("phone"));
   const reference = String(formData.get("reference") || "").trim();
   if (!phone && !reference) {
     customerLookupFeedback.textContent = "กรุณากรอกเบอร์โทร หรือเลขอ้างอิง/เลขกรมธรรม์ อย่างน้อยหนึ่งช่อง";
@@ -187,5 +221,13 @@ customerLookupForm?.addEventListener("submit", async (event) => {
     setCustomerLoading(false);
     focusCustomerResults();
   }
+});
+
+lookupPhoneInput?.addEventListener("input", () => {
+  formatPhoneInputValue(lookupPhoneInput);
+});
+
+lookupPhoneInput?.addEventListener("blur", () => {
+  lookupPhoneInput.value = formatThaiPhoneNumber(lookupPhoneInput.value);
 });
 })();
